@@ -35,6 +35,14 @@ jobs:
       - name: Build
         run: npm run build
 
+      # history 路由兜底：静态托管没有服务端 rewrite，
+      # 直接访问 /dashboard 这类子路径会 404，用 index.html 的副本接管后由前端路由解析。
+      - name: Configure route fallback
+        run: cp dist/index.html dist/404.html
+
+      - name: Verify route fallback
+        run: test -f dist/404.html && echo "404.html fallback is in place."
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 

@@ -1,0 +1,115 @@
+/**
+ * 设计令牌（Design Tokens）
+ * 单色体系：只用黑 / 灰 / 白，不出现任何鲜亮色。
+ * 层次靠明度差 + 1px 描边建立，主色即「最深的中性色」。
+ *
+ * 主题切换：<html data-theme="light|dark">，默认浅色。
+ * 组件只消费变量，换肤不需要改任何组件样式。
+ */
+:root {
+  color-scheme: light;
+
+  /* ---------- 布局尺寸 ---------- */
+  --header-height: 64px;
+  --aside-width: 240px;
+  --aside-width-collapsed: 64px;
+  --page-max-width: 1440px;
+
+  /* ---------- 背景层级 ---------- */
+  --bg-app: #f5f5f5;
+  --bg-sidebar: #ffffff;
+  --bg-header: rgba(255, 255, 255, 0.92);
+  --bg-surface: #ffffff;
+  --bg-surface-hover: #f2f2f2;
+  --bg-elevated: #ffffff;
+  --bg-input: #ffffff;
+
+  /* ---------- 文本 ---------- */
+  --text-primary: #0a0a0a;
+  --text-secondary: #525252;
+  --text-muted: #8a8a8a;
+  --text-inverse: #ffffff;
+
+  /* ---------- 线条 ---------- */
+  --border-color: #e5e5e5;
+  --border-strong: #d4d4d4;
+
+  /* ---------- 主色：中性黑 ---------- */
+  --accent: #171717;
+  --accent-hover: #000000;
+  --accent-text: #171717;
+  --accent-soft: rgba(0, 0, 0, 0.06);
+  --accent-border: rgba(0, 0, 0, 0.2);
+
+  /* ---------- 语义色：统一走灰阶，不用彩色 ---------- */
+  --success: #404040;
+  --success-soft: rgba(0, 0, 0, 0.05);
+  --warning: #525252;
+  --warning-soft: rgba(0, 0, 0, 0.05);
+  --danger: #171717;
+  --danger-soft: rgba(0, 0, 0, 0.05);
+  --info: #4b4b4b;
+  --info-soft: rgba(0, 0, 0, 0.05);
+
+  /* ---------- 圆角：偏方正 ---------- */
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-full: 999px;
+
+  /* ---------- 阴影：只做轻微抬升 ---------- */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.14);
+
+  /* ---------- 字体 ---------- */
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', 'PingFang SC',
+    'Microsoft YaHei', sans-serif;
+  --font-mono: ui-monospace, 'JetBrains Mono', Consolas, monospace;
+
+  /* ---------- 动效 ---------- */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration: 0.15s;
+}
+
+/**
+ * 深色模式：纯黑底 + 灰阶层次，主色反转为近白。
+ */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg-app: #0a0a0a;
+  --bg-sidebar: #101010;
+  --bg-header: rgba(16, 16, 16, 0.92);
+  --bg-surface: #141414;
+  --bg-surface-hover: #1c1c1c;
+  --bg-elevated: #1a1a1a;
+  --bg-input: #101010;
+
+  --text-primary: #f5f5f5;
+  --text-secondary: #a3a3a3;
+  --text-muted: #737373;
+  --text-inverse: #0a0a0a;
+
+  --border-color: #262626;
+  --border-strong: #3a3a3a;
+
+  --accent: #f5f5f5;
+  --accent-hover: #ffffff;
+  --accent-text: #f5f5f5;
+  --accent-soft: rgba(255, 255, 255, 0.08);
+  --accent-border: rgba(255, 255, 255, 0.22);
+
+  --success: #d4d4d4;
+  --success-soft: rgba(255, 255, 255, 0.06);
+  --warning: #bdbdbd;
+  --warning-soft: rgba(255, 255, 255, 0.06);
+  --danger: #ffffff;
+  --danger-soft: rgba(255, 255, 255, 0.06);
+  --info: #cfcfcf;
+  --info-soft: rgba(255, 255, 255, 0.06);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.6);
+}
