@@ -7,16 +7,22 @@
 ```text
 src/
 ├── api/                    # 接口层：站内唯一的网络出口
-│   ├── http.ts             # 请求封装：baseURL / Bearer 令牌 / 统一错误
+│   ├── http.ts             # 请求封装：baseURL / Bearer 令牌 / 统一错误 / 表单上传
 │   ├── session.ts          # 会话：令牌存储、登录态、跨标签页同步
 │   ├── auth.ts             # 登录 / 注册 / 退出
-│   └── users.ts            # 当前用户资料（接口预留，暂返回 null）
-├── components/             # 通用组件层
-│   └── common/             # 与业务无关的基础组件
-│       ├── AppIcon.vue     # inline SVG 图标
-│       ├── icons.ts        # 图标路径表
-│       ├── AuthCard.vue    # 登录 / 注册 / 退出共用卡片外壳
-│       └── SettingsDialog.vue  # 设置弹窗（API 地址 / 配置来源）
+│   ├── users.ts            # 当前用户资料（接口预留，暂返回 null）
+│   └── recognize.ts        # 图片识别与题目保存（接口预留，暂为前端 mock，支持多页）
+├── components/             # 组件层
+│   ├── common/             # 与业务无关的基础组件
+│   │   ├── AppIcon.vue     # inline SVG 图标
+│   │   ├── icons.ts        # 图标路径表
+│   │   ├── PageHeader.vue  # 页面页头（标题 / 描述 / 徽标 / 动作区）
+│   │   ├── EmptyState.vue  # 空状态占位
+│   │   ├── ImageCropper.vue # 手动裁剪弹窗（拖拽框选 + 缩放 + Canvas 输出）
+│   │   ├── AuthCard.vue    # 登录 / 注册 / 退出共用卡片外壳
+│   │   └── SettingsDialog.vue  # 设置弹窗（API 地址 / 配置来源）
+│   └── flow/
+│       └── FlowNav.vue     # 主流程步骤条（按当前路由高亮）
 ├── composables/            # 组合式函数层
 │   ├── useTheme.ts         # 明暗主题：切换 / 持久化
 │   └── useAccount.ts       # 账号展示状态（显示名 / 首字母 / 登录态）
@@ -24,7 +30,8 @@ src/
 │   ├── index.ts            # useConfig / saveConfig / resetConfig
 │   ├── types.ts            # SiteConfig / ConfigSource
 │   ├── defaults.ts         # 默认值
-│   └── endpoint.ts         # API base url 规整与校验
+│   ├── endpoint.ts         # API base url 规整与校验
+│   └── flow.ts             # 主流程定义（标题 / 描述 / 图标 / 路由名）
 ├── utils/                  # 工具层
 │   └── cookie.ts           # cookie 读写（沿用父项目实现）
 ├── layouts/                # 布局层：控制台外壳
@@ -33,20 +40,26 @@ src/
 │       ├── AppHeader.vue   # 顶部横向导航 + 搜索 + 用户菜单
 │       └── AppAside.vue    # 浮动可折叠侧栏（账号 / 主题）
 ├── router/                 # 路由层
-│   ├── index.ts            # 路由实例（hash 模式）+ 全局守卫
+│   ├── index.ts            # 路由实例（history 模式）+ 全局守卫
 │   ├── pages.ts            # 业务页面路由（懒加载 + meta 声明）
 │   ├── routes.ts           # 根路由：布局壳 + 子路由
 │   └── menu.ts             # 由路由表推导顶部导航
 ├── styles/                 # 样式层
 │   ├── reset.css           # 基础重置
 │   ├── variables.css       # 设计令牌（颜色 / 尺寸 / 圆角）
+│   ├── page.css            # 页面级通用骨架（页头 / 面板 / 按钮 / 表单 / 空态）
 │   └── index.css           # 入口样式与全局约定
 ├── types/                  # 类型层：跨模块共享类型
 │   ├── menu.ts
 │   └── router.d.ts         # RouteMeta 类型扩展
 ├── views/                  # 页面层：一个页面一个目录
-│   ├── dashboard/DashboardView.vue   # 临时主页
-│   └── auth/                         # 登录 / 注册 / 退出
+│   ├── dashboard/          # 控制台主页（图片入口 / 直方图统计 / 最近题目）
+│   ├── capture/            # 步骤 1：拍照上传（多图）+ 逐张裁剪 + 提交识别
+│   ├── questions/          # 步骤 2：题目编辑（按页分组）/ 步骤 4：题目管理
+│   ├── tags/               # 步骤 3：标签管理
+│   ├── review/             # 步骤 5：复习卷生成
+│   ├── stats/              # 学习分析：知识点掌握统计
+│   └── auth/               # 登录 / 注册 / 退出
 ├── App.vue
 └── main.ts
 ```
@@ -66,6 +79,30 @@ src/
 - **顶部栏（fixed，64px）**：左品牌、居中横向导航（由路由 meta 推导，`meta.menu: true` 的页面才会出现）、右侧搜索 / 主题 / 刷新 / 用户菜单。
 - **浮动侧栏（sticky）**：不是满屏高的贴边导航，而是悬浮卡片，可折叠（240px ⇄ 64px），收起状态存 `localStorage`。承载账号信息、登录 / 退出、主题切换。
 - **正文**：窗口滚动，切页由路由 `scrollBehavior` 回到顶部；≤900px 时侧栏隐藏，导航仍在顶栏。
+
+## 业务流程页面
+
+按流程示意图初始化，当前只搭页面骨架与空态，不预置任何演示数据。
+
+| 路由 | 页面 | 对应环节 |
+|---|---|---|
+| `/dashboard` | 控制台主页 | 图片入口 / 直方图统计 / 最近题目 |
+| `/capture` | 拍照上传 | 多图上传、逐张裁剪、一次性提交识别 |
+| `/questions/edit` | 题目编辑 | 按页校对后端返回的 OCR 结果 |
+| `/tags` | 标签管理 | 学年 / 科目 / 知识点 |
+| `/questions` | 题目管理 | 题库列表与筛选 |
+| `/review` | 复习卷生成 | 按标签与通过率抽题成卷 |
+| `/stats` | 知识点掌握统计 | 按标签统计题量与通过率 |
+
+- 拍照页不显示流程步骤条：支持一次选择或拖入多张照片，列表里逐张点开裁剪；只选一张时会直接打开裁剪弹窗。
+- 未裁剪的图片提交时退回原图，所以「全部裁剪」不是必须的。
+- 提交时把整批图片一次交给 `api/recognize.ts`，一个任务对应多页，成功后带 `taskId` 跳到题目编辑页。
+- 识别接口尚未接入，`api/recognize.ts` 为每页返回一道字段全空的题，编辑页因此展示空文本框，用户可直接录入或增删题目。
+- 题目编辑页左侧按页分组，右侧原图跟着当前页切换；多页时底部有缩略图可快速跳页。
+- 主流程的顺序、标题、描述集中在 `config/flow.ts`，各流程页的步骤条共用这份数据；`FlowStep.name` 必须是有效路由名。
+- 主页不再渲染流程卡片，改为「图片入口 + 直方图统计 + 最近题目」三块；后两块当前无数据源，走空态，`stats` / `recentQuestions` 留成空数组等接口接入。
+- 通用排版在 `styles/page.css`：`.page`、`.panel`、`.btn`、`.field`、`.empty`、`.table`，页面只写业务特有样式。
+- 新增业务页仍然只需两步：`views/` 建页面 → `router/pages.ts` 加路由；`meta.menu: true` 自动进顶部导航。
 
 ## 配置与 cookie 继承
 

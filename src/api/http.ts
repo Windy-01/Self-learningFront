@@ -132,7 +132,7 @@ async function readBody(response: Response): Promise<unknown> {
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body, query, signal, auth = true } = options
   const headers: Record<string, string> = { Accept: 'application/json' }
-  let payload: string | undefined
+  let payload: BodyInit | undefined
 
   if (auth) {
     const authorization = getAuthorizationHeader()
@@ -143,8 +143,13 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   }
 
   if (body !== undefined) {
-    headers['Content-Type'] = 'application/json'
-    payload = JSON.stringify(body)
+    if (body instanceof FormData) {
+      // 文件上传：交给浏览器自动带 boundary，手动设 Content-Type 反而会坏掉。
+      payload = body
+    } else {
+      headers['Content-Type'] = 'application/json'
+      payload = JSON.stringify(body)
+    }
   }
 
   let response: Response
@@ -196,4 +201,18 @@ export function postJson<T>(
   options: Omit<RequestOptions, 'method' | 'body'> = {},
 ): Promise<T> {
   return request<T>(path, { ...options, method: 'POST', body })
+}
+
+/**
+ * POST 表单（含文件上传）。
+ *
+ * `Content-Type` 由浏览器按 boundary 自动生成，这里不手动设置，
+ * 调用方只需把 `FormData` 组装好传进来。
+ */
+export function postForm<T>(
+  path: string,
+  form: FormData,
+  options: Omit<RequestOptions, 'method' | 'body'> = {},
+): Promise<T> {
+  return request<T>(path, { ...options, method: 'POST', body: form })
 }

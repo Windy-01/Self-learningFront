@@ -279,20 +279,33 @@ onBeforeUnmount(() => {
 }
 
 /* ---------- 顶部导航 ---------- */
+/**
+ * 页面变多后导航改为「可伸缩的居中条」：
+ * 空间足够时居中排布，空间不足时横向滚动，不会挤压品牌与右侧动作区。
+ */
 .top-nav {
-  position: absolute;
-  left: 50%;
   display: flex;
+  flex: 1;
+  justify-content: center;
+  /* 溢出时退化为左对齐，避免居中把第一项挤出可视区 */
+  justify-content: safe center;
+  min-width: 0;
   height: 100%;
-  transform: translateX(-50%);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.top-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .top-nav__link {
   position: relative;
   display: flex;
+  flex: none;
   align-items: center;
-  padding: 0 18px;
-  font-size: 13.5px;
+  padding: 0 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
   white-space: nowrap;
@@ -302,9 +315,9 @@ onBeforeUnmount(() => {
 .top-nav__link::after {
   content: '';
   position: absolute;
-  right: 18px;
+  right: 12px;
   bottom: 0;
-  left: 18px;
+  left: 12px;
   height: 2px;
   background: transparent;
   transition: background var(--duration) var(--ease);
@@ -577,7 +590,7 @@ onBeforeUnmount(() => {
   transform: translateY(-4px);
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1280px) {
   .search {
     display: none;
   }
@@ -595,12 +608,13 @@ onBeforeUnmount(() => {
   }
 
   .top-nav__link {
-    padding: 0 12px;
+    padding: 0 10px;
+    font-size: 12.5px;
   }
 
   .top-nav__link::after {
-    right: 12px;
-    left: 12px;
+    right: 10px;
+    left: 10px;
   }
 }
 </style>
