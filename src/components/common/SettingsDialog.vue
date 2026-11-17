@@ -1,28 +1,70 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import AppIcon from './AppIcon.vue'
-import { isApiBaseUrlInvalid, useConfig } from '@/config'
+import { isApiBaseUrlInvalid, normalizeApiBaseUrl, useConfig } from '@/config'
+import { useTheme } from '@/composables/useTheme'
+import { useToast } from '@/composables/useToast'
 
+/**
+ * 设置弹窗。
+ *
+ * 只有四件事：接口地址、外观、本地作答草稿、当前身份说明。
+ * 不做成独立页面 —— 内容太少，跳页反而增加一次导航成本。
+ */
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
 
-const { config, configSource, saveConfig, resetConfig } = useConfig()
+const { config, saveConfig, resetConfig } = useConfig()
+const { theme, setTheme } = useTheme()
+const { push } = useToast()
 
 const draft = ref('')
 const error = ref('')
 const notice = ref('')
+const testing = ref(false)
+const draftCount = ref(0)
 
-/** 当前配置来源，展示在弹窗里方便确认「继承有没有生效」。 */
-const sourceLabel = computed(() => {
-  switch (configSource.value) {
-    case 'own':
-      return '本项目配置（console-settings）'
-    case 'inherited':
-      return '继承自父站点（windy-settings）'
-    default:
-      return '默认值（与站点同源）'
+/** 本地草稿的键前缀：`sheet:` 是作答草稿（P3），`capture:draft` 是录入草稿（P2）。 */
+const DRAFT_PREFIXES = ['sheet:', 'capture:draft']
+
+function isDraftKey(key: string): boolean {
+  return DRAFT_PREFIXES.some((prefix) => key.startsWith(prefix))
+}
+
+function countDrafts(): number {
+  try {
+    let count = 0
+
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const key = window.localStorage.key(index)
+
+      if (key && isDraftKey(key)) count += 1
+    }
+
+    return count
+  } catch {
+    return 0
   }
-})
+}
+
+function clearDrafts(): void {
+  try {
+    const keys: string[] = []
+
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const key = window.localStorage.key(index)
+
+      if (key && isDraftKey(key)) keys.push(key)
+    }
+
+    for (const key of keys) window.localStorage.removeItem(key)
+  } catch {
+    /* 存储不可用时忽略 */
+  }
+
+  draftCount.value = countDrafts()
+  push('已清除本地草稿')
+}
 
 watch(
   () => props.open,
@@ -32,9 +74,41 @@ watch(
     draft.value = config.apiBaseUrl
     error.value = ''
     notice.value = ''
+    draftCount.value = countDrafts()
   },
   { immediate: true },
 )
+
+/** 用**输入框里的地址**探测，而不是已保存的地址 —— 否则「测试」测的是旧的。 */
+async function testConnection(): Promise<void> {
+  error.value = ''
+  notice.value = ''
+
+  if (isApiBaseUrlInvalid(draft.value)) {
+    error.value = '地址需要以 http:// 或 https:// 开头。'
+    return
+  }
+
+  testing.value = true
+
+  try {
+    const base = normalizeApiBaseUrl(draft.value)
+    const response = await fetch(`${base}/api/label`, { headers: { Accept: 'application/json' } })
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+
+    const data: unknown = await response.json()
+    const count = Array.isArray(data) ? data.length : 0
+
+    notice.value = `连接成功，读到 ${count} 个标签。`
+  } catch (cause) {
+    error.value = cause instanceof Error ? `连不上：${cause.message}` : '连不上服务。'
+  } finally {
+    testing.value = false
+  }
+}
 
 function handleSave(): void {
   error.value = ''
@@ -52,14 +126,15 @@ function handleSave(): void {
     return
   }
 
-  notice.value = '已保存到 console-settings。'
+  push('设置已保存')
+  emit('close')
 }
 
 function handleReset(): void {
   resetConfig()
   draft.value = config.apiBaseUrl
   error.value = ''
-  notice.value = '已删除 console-settings，重新读取配置。'
+  notice.value = '已恢复默认地址。'
 }
 
 function onKeydown(event: KeyboardEvent): void {
@@ -83,34 +158,67 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
           </button>
         </header>
 
-        <p class="settings__desc">
-          配置存在 cookie <code>console-settings</code> 里，与父站点的
-          <code>windy-settings</code> 分开保存。本项目没有配置内容时，会自动继承父站点的
-          <code>apiBaseUrl</code>。
-        </p>
-
         <label class="settings__field">
-          <span class="settings__label">API 地址</span>
+          <span class="settings__label">接口地址</span>
           <input
             v-model="draft"
             class="settings__input"
             type="text"
-            placeholder="https://api.example.com"
+            placeholder="http://localhost:8080"
             spellcheck="false"
           />
-          <span class="settings__hint">留空表示与站点同源，请求走相对路径。</span>
+          <span class="settings__hint">留空表示与站点同源（走相对路径，适合 vite 代理）。</span>
         </label>
+
+        <div class="settings__row">
+          <button class="btn btn--sm" type="button" :disabled="testing" @click="testConnection">
+            {{ testing ? '测试中…' : '测试连接' }}
+          </button>
+          <button class="btn btn--sm btn--ghost" type="button" @click="handleReset">恢复默认</button>
+        </div>
 
         <p v-if="error" class="settings__error">{{ error }}</p>
         <p v-else-if="notice" class="settings__notice">{{ notice }}</p>
 
-        <p class="settings__source">当前来源：{{ sourceLabel }}</p>
+        <div class="settings__block">
+          <span class="settings__label">外观</span>
+          <div class="segmented">
+            <button
+              class="segmented__item"
+              :class="{ 'is-active': theme === 'light' }"
+              type="button"
+              @click="setTheme('light')"
+            >
+              浅色
+            </button>
+            <button
+              class="segmented__item"
+              :class="{ 'is-active': theme === 'dark' }"
+              type="button"
+              @click="setTheme('dark')"
+            >
+              深色
+            </button>
+          </div>
+        </div>
+
+        <div class="settings__block">
+          <span class="settings__label">本地数据</span>
+          <div class="settings__line">
+            <span class="settings__hint">本地草稿 {{ draftCount }} 份（存在本机，不上传）</span>
+            <button class="btn btn--sm btn--ghost" type="button" :disabled="draftCount === 0" @click="clearDrafts">
+              清除
+            </button>
+          </div>
+        </div>
+
+        <p class="settings__source">
+          当前学生：1 · demo 环境无登录，所有请求由服务端固定为该身份。
+        </p>
 
         <footer class="settings__actions">
-          <button class="settings__btn" type="button" @click="handleReset">恢复默认</button>
-          <button class="settings__btn settings__btn--primary" type="button" @click="handleSave">
-            保存
-          </button>
+          <button class="btn" type="button" @click="emit('close')">取消</button>
+          <button class="btn btn--primary" type="button" @click="handleSave">保存</button>
         </footer>
       </section>
     </div>
@@ -121,7 +229,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 .settings-layer {
   position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: 60;
   display: grid;
   place-items: center;
   padding: 24px;
@@ -130,7 +238,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 
 .settings {
   width: 100%;
-  max-width: 440px;
+  max-width: 460px;
   padding: 20px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
@@ -142,7 +250,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 14px;
 }
 
 .settings__title {
@@ -165,43 +273,28 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
   background: var(--bg-surface-hover);
 }
 
-.settings__desc {
-  font-size: 12.5px;
-  line-height: 1.7;
-  color: var(--text-secondary);
-}
-
-.settings__desc code {
-  padding: 1px 4px;
-  border-radius: var(--radius-sm);
-  background: var(--bg-surface-hover);
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-}
-
 .settings__field {
   display: block;
-  margin-top: 16px;
 }
 
 .settings__label {
   display: block;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-secondary);
 }
 
 .settings__input {
   width: 100%;
-  min-height: 38px;
+  height: 34px;
   padding: 0 10px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
   background: var(--bg-input);
   color: var(--text-primary);
-  font: inherit;
-  font-size: 13px;
+  font-size: 12.5px;
+  outline: none;
   transition:
     border-color var(--duration) var(--ease),
     box-shadow var(--duration) var(--ease);
@@ -209,7 +302,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 
 .settings__input:focus {
   border-color: var(--accent);
-  outline: none;
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
@@ -220,10 +312,16 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
   color: var(--text-muted);
 }
 
+.settings__row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
 .settings__error {
   margin-top: 10px;
   font-size: 12px;
-  color: var(--danger);
+  color: var(--text-primary);
 }
 
 .settings__notice {
@@ -232,8 +330,25 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
   color: var(--text-secondary);
 }
 
+.settings__block {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-color);
+}
+
+.settings__line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.settings__line .settings__hint {
+  margin-top: 0;
+}
+
 .settings__source {
-  margin-top: 14px;
+  margin-top: 16px;
   padding-top: 12px;
   border-top: 1px solid var(--border-color);
   font-size: 11.5px;
@@ -245,36 +360,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
   justify-content: flex-end;
   gap: 8px;
   margin-top: 16px;
-}
-
-.settings__btn {
-  min-height: 34px;
-  padding: 0 14px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  background: var(--bg-surface);
-  transition:
-    color var(--duration) var(--ease),
-    border-color var(--duration) var(--ease);
-}
-
-.settings__btn:hover {
-  color: var(--text-primary);
-  border-color: var(--text-muted);
-}
-
-.settings__btn--primary {
-  border-color: transparent;
-  color: var(--text-inverse);
-  background: var(--accent);
-}
-
-.settings__btn--primary:hover {
-  color: var(--text-inverse);
-  opacity: 0.88;
 }
 
 .dialog-enter-active,

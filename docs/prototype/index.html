@@ -1,0 +1,1935 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>错题本 · 页面原型</title>
+<style>
+/* ============ 设计令牌：沿用 variables.css 的单色体系 ============ */
+:root{
+  color-scheme:light;
+  --header-height:64px;
+  --bg-app:#f5f5f5; --bg-surface:#fff; --bg-hover:#f2f2f2; --bg-input:#fff;
+  --text-1:#0a0a0a; --text-2:#525252; --text-3:#8a8a8a; --text-inv:#fff;
+  --border:#e5e5e5; --border-strong:#d4d4d4;
+  --accent:#171717; --accent-hover:#000; --accent-soft:rgba(0,0,0,.06); --accent-border:rgba(0,0,0,.2);
+  --r-sm:3px; --r-md:4px; --r-lg:6px; --r-full:999px;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.06);
+  --shadow-md:0 4px 12px rgba(0,0,0,.08);
+  --shadow-lg:0 16px 40px rgba(0,0,0,.16);
+  --font:'Inter',system-ui,-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
+  --ease:cubic-bezier(.4,0,.2,1);
+}
+:root[data-theme=dark]{
+  color-scheme:dark;
+  --bg-app:#0a0a0a; --bg-surface:#141414; --bg-hover:#1c1c1c; --bg-input:#101010;
+  --text-1:#f5f5f5; --text-2:#a3a3a3; --text-3:#737373; --text-inv:#0a0a0a;
+  --border:#262626; --border-strong:#3a3a3a;
+  --accent:#f5f5f5; --accent-hover:#fff; --accent-soft:rgba(255,255,255,.08); --accent-border:rgba(255,255,255,.22);
+  --shadow-sm:0 1px 2px rgba(0,0,0,.5); --shadow-md:0 4px 12px rgba(0,0,0,.5); --shadow-lg:0 16px 40px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:var(--font); font-size:13px; line-height:1.6;
+  color:var(--text-1); background:var(--bg-app);
+  -webkit-font-smoothing:antialiased;
+}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input,textarea,select{font:inherit;color:inherit}
+a{color:inherit;text-decoration:none}
+::selection{background:var(--accent);color:var(--text-inv)}
+
+/* ============ 顶栏 ============ */
+.topbar{
+  position:fixed; inset:0 0 auto; z-index:40; height:var(--header-height);
+  display:flex; align-items:center; gap:22px;
+  padding:0 24px; border-bottom:1px solid var(--border);
+  background:var(--bg-surface);
+}
+.brand{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:700;letter-spacing:-.2px;flex:none}
+.brand__mark{
+  display:grid;place-items:center;width:24px;height:24px;border-radius:var(--r-md);
+  background:var(--accent);color:var(--text-inv);font-size:11px;font-weight:700;
+}
+.brand__sub{font-size:11px;font-weight:500;color:var(--text-3);letter-spacing:0;padding-left:2px}
+.topbar__nav{display:flex;flex:1;align-items:center;gap:2px;min-width:0}
+.topbar__actions{display:flex;flex:none;align-items:center;gap:8px}
+
+/* ============ 骨架：单列，导航全在顶栏 ============ */
+.shell{
+  max-width:1440px; margin:0 auto;
+  padding:calc(var(--header-height) + 22px) 24px 40px;
+}
+.nav{display:flex;align-items:center;gap:2px}
+.nav__item{
+  display:flex;align-items:center;gap:7px;height:32px;padding:0 10px;
+  border-radius:var(--r-md);font-size:13px;color:var(--text-2);white-space:nowrap;
+  transition:background .15s var(--ease),color .15s var(--ease);
+}
+.nav__item:hover{background:var(--bg-hover);color:var(--text-1)}
+.nav__item.is-active{background:var(--accent-soft);color:var(--text-1);font-weight:600}
+.nav__item svg{flex:none;width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.nav__divider{flex:none;width:1px;height:16px;margin:0 6px;background:var(--border)}
+.main{min-width:0}
+
+/* ============ 页面通用 ============ */
+.screen{display:none;animation:fade .18s var(--ease)}
+.screen.is-active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+.page{display:flex;flex-direction:column;gap:16px;max-width:1120px}
+.page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.page-title{font-size:21px;font-weight:700;letter-spacing:-.3px;line-height:1.3}
+.page-desc{margin-top:4px;font-size:12.5px;color:var(--text-2)}
+.page-head__side{display:flex;align-items:center;gap:8px;flex:none}
+.back{
+  display:inline-flex;align-items:center;gap:5px;margin-bottom:10px;
+  font-size:12px;color:var(--text-3);
+}
+.back:hover{color:var(--text-1)}
+
+/* ============ 面板 ============ */
+.panel{border:1px solid var(--border);border-radius:var(--r-lg);background:var(--bg-surface);overflow:hidden}
+.panel__head{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  min-height:44px;padding:9px 16px;border-bottom:1px solid var(--border);
+}
+.panel__title{font-size:13px;font-weight:600}
+.panel__hint{font-size:11.5px;color:var(--text-3)}
+.panel__body{padding:16px}
+.panel__body--flush{padding:0}
+
+/* ============ 按钮 ============ */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  height:32px;padding:0 12px;border:1px solid var(--border-strong);border-radius:var(--r-md);
+  font-size:12.5px;font-weight:600;background:var(--bg-surface);white-space:nowrap;
+  transition:background .15s var(--ease),border-color .15s var(--ease),opacity .15s;
+}
+.btn:hover:not(:disabled){background:var(--bg-hover)}
+.btn--primary{border-color:var(--accent);background:var(--accent);color:var(--text-inv)}
+.btn--primary:hover:not(:disabled){background:var(--accent-hover);border-color:var(--accent-hover)}
+.btn--ghost{border-color:transparent;background:transparent;color:var(--text-2)}
+.btn--ghost:hover:not(:disabled){background:var(--bg-hover);color:var(--text-1)}
+.btn--danger{border-color:var(--border-strong);color:var(--text-1)}
+.btn--sm{height:28px;padding:0 10px;font-size:12px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn__icon{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.link{font-size:12px;color:var(--text-2);border-bottom:1px solid transparent}
+.link:hover{color:var(--text-1);border-bottom-color:var(--accent-border)}
+
+/* ============ 表单 ============ */
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field__label{font-size:11.5px;font-weight:600;color:var(--text-2)}
+.field__hint{font-size:11px;color:var(--text-3);line-height:1.6}
+.input,.select,textarea.input{
+  width:100%;height:34px;padding:0 10px;border:1px solid var(--border-strong);
+  border-radius:var(--r-md);background:var(--bg-input);font-size:12.5px;outline:none;
+  transition:border-color .15s var(--ease),box-shadow .15s var(--ease);
+}
+textarea.input{height:auto;padding:9px 10px;line-height:1.65;resize:vertical}
+.input:focus,.select:focus,textarea.input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.input::placeholder{color:var(--text-3)}
+
+/* ============ 胶囊 / 徽标 ============ */
+.chip{
+  display:inline-flex;align-items:center;gap:5px;height:25px;padding:0 9px;
+  border:1px solid var(--border);border-radius:var(--r-full);
+  font-size:11.5px;color:var(--text-2);background:var(--bg-surface);white-space:nowrap;
+}
+.chip--add{border-style:dashed;color:var(--text-3);cursor:pointer}
+.chip--add:hover{color:var(--text-1);border-color:var(--accent-border)}
+.chip--sys{background:var(--bg-hover);color:var(--text-3)}
+.chip--on{border-color:var(--accent);background:var(--accent-soft);color:var(--text-1);font-weight:600}
+.chip__x{font-size:13px;line-height:1;color:var(--text-3);cursor:pointer}
+.chip__x:hover{color:var(--text-1)}
+.chip-row{display:flex;flex-wrap:wrap;gap:6px}
+.badge{
+  display:inline-flex;align-items:center;height:21px;padding:0 8px;
+  border:1px solid var(--accent-border);border-radius:var(--r-full);
+  font-size:10.5px;font-weight:600;color:var(--text-1);background:var(--accent-soft);white-space:nowrap;
+}
+.badge--muted{border-color:var(--border);border-style:dashed;color:var(--text-3);background:transparent;font-weight:500}
+
+/* ============ 指标卡 ============ */
+.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.metric{padding:14px 16px;border:1px solid var(--border);border-radius:var(--r-lg);background:var(--bg-surface)}
+.metric__label{font-size:11.5px;color:var(--text-3)}
+.metric__value{margin-top:2px;font-size:24px;font-weight:700;letter-spacing:-.6px;line-height:1.2}
+.metric__meta{font-size:11px;color:var(--text-3)}
+
+/* ============ 两栏 ============ */
+.split{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:16px;align-items:start}
+.split--even{grid-template-columns:repeat(2,minmax(0,1fr))}
+
+/* ============ 列表行 ============ */
+.rows{display:flex;flex-direction:column}
+.row{
+  display:flex;align-items:center;gap:12px;padding:12px 16px;
+  border-bottom:1px solid var(--border);cursor:pointer;
+  transition:background .15s var(--ease);
+}
+.row:last-child{border-bottom:none}
+.row:hover{background:var(--bg-hover)}
+.row__thumb{
+  flex:none;width:44px;height:44px;border:1px solid var(--border);border-radius:var(--r-md);
+  background:var(--bg-app);
+  background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);
+  background-size:9px 9px;
+}
+.row__body{flex:1;min-width:0}
+.row__title{
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  font-size:12.5px;line-height:1.55;color:var(--text-1);
+}
+.row__meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:3px;font-size:11px;color:var(--text-3)}
+.row__side{flex:none;display:flex;align-items:center;gap:10px;font-size:11.5px;color:var(--text-3)}
+.row__go{color:var(--text-2)}
+.row:hover .row__go{color:var(--text-1)}
+
+/* ============ 空态 ============ */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:44px 20px;text-align:center}
+.empty__icon{
+  display:grid;place-items:center;width:44px;height:44px;margin-bottom:6px;
+  border:1px solid var(--border);border-radius:var(--r-lg);background:var(--bg-hover);color:var(--text-3);
+}
+.empty__title{font-size:13px;font-weight:600;color:var(--text-2)}
+.empty__desc{max-width:360px;font-size:11.5px;color:var(--text-3)}
+.empty__action{margin-top:10px}
+
+/* ============ 分段 / Tab ============ */
+.segmented{display:inline-flex;padding:2px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--bg-app)}
+.segmented button{height:26px;padding:0 11px;border-radius:var(--r-sm);font-size:12px;color:var(--text-2)}
+.segmented button.is-active{background:var(--bg-surface);color:var(--text-1);font-weight:600;box-shadow:var(--shadow-sm)}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border)}
+.tab{
+  position:relative;height:38px;padding:0 12px;font-size:12.5px;color:var(--text-3);
+  display:flex;align-items:center;gap:6px;
+}
+.tab:hover{color:var(--text-1)}
+.tab.is-active{color:var(--text-1);font-weight:600}
+.tab.is-active::after{content:'';position:absolute;left:10px;right:10px;bottom:-1px;height:2px;background:var(--accent)}
+.tab__count{font-size:11px;color:var(--text-3);font-weight:400}
+
+/* ============ 工具条 ============ */
+.toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--border)}
+.search{position:relative;flex:1;min-width:200px}
+.search input{width:100%;height:32px;padding:0 10px 0 30px;border:1px solid var(--border-strong);border-radius:var(--r-md);background:var(--bg-input);font-size:12.5px;outline:none}
+.search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);width:14px;height:14px;stroke:var(--text-3);fill:none;stroke-width:1.8;stroke-linecap:round}
+.notice{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:8px 16px;border-bottom:1px solid var(--border);background:var(--bg-app);
+  font-size:11.5px;color:var(--text-2);
+}
+
+/* ============ 分页 ============ */
+.pager{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px;border-top:1px solid var(--border);font-size:11.5px;color:var(--text-3)}
+.pager__btns{display:flex;gap:4px}
+.pager__btns button{min-width:26px;height:26px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:11.5px;color:var(--text-2)}
+.pager__btns button.is-active{background:var(--accent);border-color:var(--accent);color:var(--text-inv)}
+.pager__btns button:disabled{opacity:.4;cursor:not-allowed}
+
+/* ============ 得分条 ============ */
+.meter{position:relative;height:6px;border-radius:var(--r-full);background:var(--border);overflow:hidden;min-width:60px}
+.meter i{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:var(--r-full)}
+.meter--empty i{background:transparent}
+.rate{font-variant-numeric:tabular-nums;font-weight:600;font-size:12px}
+
+/* ============ 详情页 ============ */
+.detail{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px;align-items:start}
+.stem{font-size:14px;line-height:1.85;color:var(--text-1);white-space:pre-wrap}
+.options{display:flex;flex-direction:column;gap:7px;margin-top:14px}
+.option{display:flex;gap:9px;padding:8px 11px;border:1px solid var(--border);border-radius:var(--r-md);font-size:12.5px}
+.option__key{flex:none;width:16px;font-weight:600;color:var(--text-2)}
+.answer-box{margin-top:16px;padding-top:14px;border-top:1px dashed var(--border)}
+.answer-box__label{font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:var(--text-3);margin-bottom:5px}
+.answer-box__body{font-size:13px;line-height:1.75;white-space:pre-wrap}
+.kv{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:12px}
+.kv:last-child{border-bottom:none}
+.kv__k{color:var(--text-3);font-size:11.5px}
+.kv__v{color:var(--text-1);text-align:right}
+.side-block{padding:14px 16px;border-bottom:1px solid var(--border)}
+.side-block:last-child{border-bottom:none}
+.side-block__head{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+.side-block__title{font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:var(--text-3)}
+.popover{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;padding:9px;border:1px dashed var(--border-strong);border-radius:var(--r-md);background:var(--bg-app)}
+.history{display:flex;flex-direction:column}
+.history__item{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border);font-size:12px}
+.history__item:last-child{border-bottom:none}
+.history__no{width:52px;flex:none;color:var(--text-3);font-size:11.5px}
+.history__ans{flex:1;min-width:0;color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.history__score{font-variant-numeric:tabular-nums;color:var(--text-1);font-weight:600}
+
+/* ============ 录入 stepper ============ */
+.steps{display:flex;align-items:center;gap:0;padding:0 4px}
+.step{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-3)}
+.step__no{
+  display:grid;place-items:center;width:22px;height:22px;border:1px solid var(--border-strong);
+  border-radius:50%;font-size:11px;font-weight:600;
+}
+.step.is-active{color:var(--text-1);font-weight:600}
+.step.is-active .step__no{border-color:var(--accent);background:var(--accent);color:var(--text-inv)}
+.step.is-done .step__no{border-color:var(--accent);color:var(--text-1)}
+.step__line{width:36px;height:1px;margin:0 12px;background:var(--border)}
+.dropzone{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  min-height:260px;padding:28px;border:1px dashed var(--border-strong);border-radius:var(--r-lg);
+  background:var(--bg-app);text-align:center;cursor:pointer;transition:border-color .15s,background .15s;
+}
+.dropzone:hover{border-color:var(--accent-border);background:var(--bg-hover)}
+.dropzone__title{font-size:13px;font-weight:600}
+.dropzone__desc{font-size:11.5px;color:var(--text-3)}
+.paper-wrap{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:14px;align-items:start}
+.paper{
+  position:relative;aspect-ratio:3/4;border:1px solid var(--border);border-radius:var(--r-md);
+  background:var(--bg-app);overflow:hidden;cursor:crosshair;user-select:none;
+  background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);
+  background-size:22px 22px;
+}
+.paper__hint{position:absolute;inset:auto 0 12px;text-align:center;font-size:11px;color:var(--text-3);pointer-events:none}
+.region{position:absolute;border:1px solid var(--accent);background:var(--accent-soft);border-radius:2px}
+.region__no{
+  position:absolute;top:-9px;left:-9px;display:grid;place-items:center;width:18px;height:18px;
+  border-radius:50%;background:var(--accent);color:var(--text-inv);font-size:10px;font-weight:600;
+}
+.ghost{position:absolute;border:1px dashed var(--accent);background:var(--accent-soft);border-radius:2px;pointer-events:none}
+.region-list{display:flex;flex-direction:column;gap:8px}
+.region-card{
+  display:flex;align-items:center;gap:9px;padding:8px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--bg-surface);
+}
+.region-card__thumb{flex:none;width:36px;height:36px;border:1px solid var(--border);border-radius:2px;background:var(--bg-app)}
+.region-card__meta{flex:1;min-width:0;font-size:11.5px;color:var(--text-2)}
+.q-card{border:1px solid var(--border);border-radius:var(--r-lg);background:var(--bg-surface);overflow:hidden;margin-bottom:12px}
+.q-card__head{display:flex;align-items:center;gap:9px;padding:9px 14px;border-bottom:1px solid var(--border);background:var(--bg-app)}
+.q-card__no{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--accent);color:var(--text-inv);font-size:10.5px;font-weight:600}
+.q-card__body{padding:14px;display:grid;grid-template-columns:150px minmax(0,1fr);gap:14px}
+.q-card__thumb{width:150px;height:110px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--bg-app);
+  background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:14px 14px}
+.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.form-grid .span-2{grid-column:span 2}
+.option-editor{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.option-input{display:flex;align-items:center;gap:6px}
+.option-input span{flex:none;width:14px;font-size:11.5px;font-weight:600;color:var(--text-3)}
+.submitbar{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:12px 16px;border:1px solid var(--border);border-radius:var(--r-lg);background:var(--bg-surface);
+}
+.progress{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--text-2)}
+.progress__bar{width:140px;height:4px;border-radius:var(--r-full);background:var(--border);overflow:hidden}
+.progress__bar i{display:block;height:100%;background:var(--accent);transition:width .3s var(--ease)}
+
+/* ============ 复习卷卡片 ============ */
+.sheet-card{display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer}
+.sheet-card:last-child{border-bottom:none}
+.sheet-card:hover{background:var(--bg-hover)}
+.sheet-card__body{flex:1;min-width:0}
+.sheet-card__title{font-size:13px;font-weight:600}
+.sheet-card__meta{margin-top:2px;font-size:11.5px;color:var(--text-3)}
+.sheet-card__rate{flex:none;text-align:right;min-width:64px}
+.sheet-card__rate b{display:block;font-size:16px;letter-spacing:-.3px;font-variant-numeric:tabular-nums}
+
+/* ============ 作答页 ============ */
+.quiz-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.quiz-dots{display:flex;flex-wrap:wrap;gap:4px}
+.quiz-dot{
+  width:24px;height:24px;border:1px solid var(--border);border-radius:var(--r-sm);
+  font-size:11px;color:var(--text-3);font-variant-numeric:tabular-nums;
+}
+.quiz-dot.is-done{border-color:var(--accent-border);color:var(--text-1);background:var(--accent-soft)}
+.quiz-dot.is-current{border-color:var(--accent);background:var(--accent);color:var(--text-inv)}
+.quiz-card{padding:22px;border:1px solid var(--border);border-radius:var(--r-lg);background:var(--bg-surface)}
+.quiz-card__no{font-size:11px;letter-spacing:.5px;color:var(--text-3);margin-bottom:8px}
+.quiz-options{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+.quiz-option{
+  display:flex;align-items:flex-start;gap:10px;padding:11px 13px;
+  border:1px solid var(--border);border-radius:var(--r-md);font-size:12.5px;text-align:left;
+  transition:border-color .15s,background .15s;
+}
+.quiz-option:hover{border-color:var(--border-strong);background:var(--bg-hover)}
+.quiz-option.is-picked{border-color:var(--accent);background:var(--accent-soft)}
+.quiz-option__key{
+  display:grid;place-items:center;flex:none;width:20px;height:20px;border:1px solid var(--border-strong);
+  border-radius:50%;font-size:10.5px;font-weight:600;
+}
+.quiz-option.is-picked .quiz-option__key{border-color:var(--accent);background:var(--accent);color:var(--text-inv)}
+.quiz-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px}
+.quiz-note{font-size:11px;color:var(--text-3)}
+
+/* ============ 评分抽屉 ============ */
+.overlay{
+  position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.32);
+  opacity:0;pointer-events:none;transition:opacity .2s var(--ease);
+}
+.overlay.is-open{opacity:1;pointer-events:auto}
+.drawer{
+  position:fixed;top:0;right:0;bottom:0;z-index:70;display:flex;flex-direction:column;
+  width:min(520px,100%);background:var(--bg-surface);border-left:1px solid var(--border);
+  box-shadow:var(--shadow-lg);transform:translateX(100%);transition:transform .24s var(--ease);
+}
+.drawer.is-open{transform:none}
+.drawer__head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border)}
+.drawer__title{font-size:14px;font-weight:700}
+.drawer__desc{margin-top:2px;font-size:11.5px;color:var(--text-3)}
+.drawer__body{flex:1;overflow:auto;padding:6px 20px 12px}
+.drawer__foot{padding:14px 20px;border-top:1px solid var(--border);background:var(--bg-surface)}
+.grade-row{padding:12px 0;border-bottom:1px solid var(--border)}
+.grade-row:last-child{border-bottom:none}
+.grade-row__head{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px}
+.grade-row__no{font-weight:600}
+.grade-row__ans{flex:1;min-width:0;color:var(--text-3);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grade-row__ctrl{display:flex;align-items:center;gap:8px;margin-top:8px}
+.grade-row__ctrl input[type=range]{flex:1;accent-color:var(--accent);height:4px}
+.mini-input{width:52px;height:26px;padding:0 6px;border:1px solid var(--border-strong);border-radius:var(--r-sm);background:var(--bg-input);font-size:11.5px;text-align:center;outline:none}
+.mini-input:focus{border-color:var(--accent)}
+.quick{display:flex;gap:4px}
+.quick button{height:24px;padding:0 8px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:11px;color:var(--text-2)}
+.quick button:hover{border-color:var(--accent-border);color:var(--text-1)}
+.quick button.is-on{background:var(--accent);border-color:var(--accent);color:var(--text-inv)}
+.grade-total{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:12px}
+.grade-total b{font-size:20px;letter-spacing:-.4px}
+.grade-total span{font-size:11.5px;color:var(--text-3)}
+
+/* ============ 结果页 ============ */
+.score-hero{display:flex;align-items:flex-end;gap:26px;padding:22px 20px;border:1px solid var(--border);border-radius:var(--r-lg);background:var(--bg-surface)}
+.score-hero__rate{font-size:44px;font-weight:700;letter-spacing:-2px;line-height:1}
+.score-hero__meta{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--text-3)}
+.score-hero__meta b{font-size:14px;color:var(--text-1);font-weight:600}
+.result-row{display:grid;grid-template-columns:34px minmax(0,1fr) 110px 90px 70px;gap:12px;align-items:center;padding:11px 16px;border-bottom:1px solid var(--border);font-size:12px}
+.result-row:last-child{border-bottom:none}
+.result-row__no{color:var(--text-3);font-variant-numeric:tabular-nums}
+.result-row__stem{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.result-row__ans{color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.result-row__score{font-variant-numeric:tabular-nums;text-align:right;font-weight:600}
+.result-row__score.is-skip{color:var(--text-3);font-weight:400}
+
+/* ============ 分析 ============ */
+.kp-row{display:grid;grid-template-columns:minmax(0,1fr) 90px 110px 92px;gap:14px;align-items:center;padding:13px 16px;border-bottom:1px solid var(--border)}
+.kp-row:last-child{border-bottom:none}
+.kp-row:hover{background:var(--bg-hover)}
+.kp-row__name{font-size:12.5px;font-weight:600}
+.kp-row__meta{font-size:11px;color:var(--text-3);margin-top:1px}
+.kp-row__meter{display:flex;align-items:center;gap:8px}
+.tag-row{display:grid;grid-template-columns:minmax(0,1fr) 64px 190px 88px;gap:14px;align-items:center;padding:11px 16px;border-bottom:1px solid var(--border);font-size:12.5px}
+.tag-row:last-child{border-bottom:none}
+.tag-row:hover{background:var(--bg-hover)}
+.tag-row__meter{display:flex;align-items:center;gap:8px;min-width:0}
+
+/* ============ 整理 ============ */
+.org-row{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--border);font-size:12.5px}
+.org-row:last-child{border-bottom:none}
+.org-row:hover{background:var(--bg-hover)}
+.org-row__name{flex:1;min-width:0;display:flex;align-items:center;gap:8px}
+.org-row__count{flex:none;width:60px;font-size:11.5px;color:var(--text-3);text-align:right}
+.org-row__ops{flex:none;display:flex;gap:2px;opacity:0;transition:opacity .15s}
+.org-row:hover .org-row__ops{opacity:1}
+.org-row__ops button{height:24px;padding:0 7px;font-size:11.5px;color:var(--text-3);border-radius:var(--r-sm)}
+.org-row__ops button:hover{background:var(--bg-surface);color:var(--text-1)}
+.org-row__ops button:disabled{opacity:.35;cursor:not-allowed}
+.org-row__ops button:disabled:hover{background:none;color:var(--text-3)}
+.inline-input{height:26px;padding:0 8px;border:1px solid var(--accent);border-radius:var(--r-sm);background:var(--bg-input);font-size:12px;outline:none;min-width:140px}
+.merge-bar{display:flex;align-items:center;gap:9px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--bg-app);font-size:11.5px;color:var(--text-2)}
+
+/* ============ 弹窗 / 提示 ============ */
+.modal{
+  position:fixed;top:50%;left:50%;z-index:80;width:min(420px,calc(100% - 32px));
+  transform:translate(-50%,-48%) scale(.98);opacity:0;pointer-events:none;
+  border:1px solid var(--border);border-radius:var(--r-lg);background:var(--bg-surface);
+  box-shadow:var(--shadow-lg);transition:opacity .18s var(--ease),transform .18s var(--ease);
+}
+.modal.is-open{opacity:1;transform:translate(-50%,-50%) scale(1);pointer-events:auto}
+.modal__head{padding:16px 18px 0}
+.modal__title{font-size:14px;font-weight:700}
+.modal__body{padding:8px 18px 16px;font-size:12px;color:var(--text-2);line-height:1.7}
+.modal__foot{display:flex;justify-content:flex-end;gap:8px;padding:0 18px 16px}
+.toast{
+  position:fixed;left:50%;bottom:28px;z-index:90;transform:translate(-50%,12px);
+  padding:9px 15px;border-radius:var(--r-md);background:var(--accent);color:var(--text-inv);
+  font-size:12px;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;
+}
+.toast.is-open{opacity:1;transform:translate(-50%,0)}
+.note{padding:10px 12px;border:1px dashed var(--border);border-radius:var(--r-md);font-size:11.5px;color:var(--text-3);line-height:1.7}
+.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}
+
+@media (max-width:1000px){
+  .shell{padding:calc(var(--header-height) + 16px) 16px 32px}
+  .split,.detail,.split--even,.paper-wrap{grid-template-columns:minmax(0,1fr)}
+  .metrics{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .q-card__body{grid-template-columns:minmax(0,1fr)}
+  .q-card__thumb{width:100%;height:120px}
+}
+@media (max-width:900px){
+  .topbar{gap:12px;padding:0 16px}
+  .nav__item span{display:none}
+  .nav__item{justify-content:center;gap:0;width:34px;padding:0}
+}
+@media (max-width:640px){
+  .metrics{grid-template-columns:minmax(0,1fr)}
+  .page-title{font-size:19px}
+  .result-row{grid-template-columns:26px minmax(0,1fr) 70px}
+  .result-row__ans,.result-row__meter{display:none}
+  .kp-row{grid-template-columns:minmax(0,1fr) 80px}
+  .kp-row__meter,.kp-row__act{display:none}
+  .brand__sub{display:none}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand__mark">错</span>
+    <span>错题本</span>
+    <span class="brand__sub">页面原型 · 可点击</span>
+  </div>
+
+  <nav class="topbar__nav nav">
+    <a class="nav__item" data-nav="dashboard" onclick="go('dashboard')" title="工作台">
+      <svg viewBox="0 0 24 24"><path d="M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z"/></svg>
+      <span>工作台</span>
+    </a>
+    <a class="nav__item" data-nav="questions" onclick="go('questions')" title="题库">
+      <svg viewBox="0 0 24 24"><path d="m12 2 9 5-9 5-9-5 9-5z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/></svg>
+      <span>题库</span>
+    </a>
+    <a class="nav__item" data-nav="review" onclick="go('review')" title="复习卷">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/></svg>
+      <span>复习卷</span>
+    </a>
+    <a class="nav__item" data-nav="analysis" onclick="go('analysis')" title="学情分析">
+      <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 17V9M12 17V5M17 17v-6"/></svg>
+      <span>学情分析</span>
+    </a>
+    <div class="nav__divider"></div>
+    <a class="nav__item" data-nav="organize" onclick="go('organize')" title="整理">
+      <svg viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><path d="M7 7h.01"/></svg>
+      <span>整理</span>
+    </a>
+  </nav>
+
+  <div class="topbar__actions">
+    <button class="btn btn--primary" onclick="go('capture')">
+      <svg class="btn__icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      录入题目
+    </button>
+    <button class="btn btn--ghost btn--sm" id="themeBtn" onclick="toggleTheme()" title="切换主题">深色</button>
+    <button class="btn btn--ghost btn--sm" onclick="openSettings()" title="设置">设置</button>
+  </div>
+</header>
+
+<div class="shell">
+  <main class="main">
+
+    <!-- ========== 工作台 ========== -->
+    <section class="screen is-active" id="s-dashboard">
+      <div class="page">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">工作台</h1>
+            <p class="page-desc" id="dashDesc"></p>
+          </div>
+        </div>
+
+        <div class="metrics" id="dashMetrics"></div>
+
+        <div class="split">
+          <section class="panel">
+            <div class="panel__head">
+              <h2 class="panel__title">继续学习</h2>
+              <span class="panel__hint">没做完的复习卷</span>
+            </div>
+            <div class="panel__body panel__body--flush" id="dashSheets"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel__head">
+              <h2 class="panel__title">最薄弱的知识点</h2>
+              <a class="panel__hint link" onclick="go('analysis')">全部 ›</a>
+            </div>
+            <div class="panel__body panel__body--flush" id="dashWeak"></div>
+          </section>
+        </div>
+
+        <section class="panel">
+          <div class="panel__head">
+            <h2 class="panel__title">最近入库</h2>
+            <a class="panel__hint link" onclick="go('questions')">题库 ›</a>
+          </div>
+          <div class="panel__body panel__body--flush" id="dashRecent"></div>
+        </section>
+      </div>
+    </section>
+
+    <!-- ========== 题库 ========== -->
+    <section class="screen" id="s-questions">
+      <div class="page">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">题库</h1>
+            <p class="page-desc">共 <span id="qTotal">0</span> 道题 · 按入库时间倒序</p>
+          </div>
+        </div>
+
+        <section class="panel">
+          <div class="toolbar">
+            <label class="search">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              <input id="qSearch" type="search" placeholder="搜题干或选项…" oninput="onSearch(this.value)">
+            </label>
+            <div class="segmented" id="qStatusSeg">
+              <button class="is-active" onclick="setStatusFilter('')">全部</button>
+              <button onclick="setStatusFilter('unresolved')">待解决</button>
+              <button onclick="setStatusFilter('resolved')">已解决</button>
+            </div>
+          </div>
+          <div id="qNotice"></div>
+          <div class="rows" id="qList"></div>
+          <div id="qPager"></div>
+        </section>
+
+        <p class="note">搜索走 Elasticsearch，只搜题干与选项，不搜答案；刚保存的题目约 1 秒后才可搜到。题库不支持按标签筛选 —— 标签的下钻入口是「生成复习卷」。</p>
+      </div>
+    </section>
+
+    <!-- ========== 题目详情 ========== -->
+    <section class="screen" id="s-detail">
+      <div class="page">
+        <div>
+          <a class="back" onclick="go('questions')">‹ 返回题库</a>
+          <div class="page-head">
+            <div>
+              <h1 class="page-title" id="detailTitle">题目</h1>
+              <p class="page-desc" id="detailDesc"></p>
+            </div>
+            <div class="page-head__side" id="detailActions"></div>
+          </div>
+        </div>
+        <div id="detailBody"></div>
+      </div>
+    </section>
+
+    <!-- ========== 录入 ========== -->
+    <section class="screen" id="s-capture">
+      <div class="page">
+        <div>
+          <a class="back" onclick="go('dashboard')">‹ 返回工作台</a>
+          <div class="page-head">
+            <div>
+              <h1 class="page-title">录入题目</h1>
+              <p class="page-desc">上传试卷照片，框出每道题，逐题填写。每题一张图，一次可以录一整页。</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="steps">
+          <div class="step is-active" id="st1"><span class="step__no">1</span>选择图片</div>
+          <div class="step__line"></div>
+          <div class="step" id="st2"><span class="step__no">2</span>框选题目</div>
+          <div class="step__line"></div>
+          <div class="step" id="st3"><span class="step__no">3</span>填写并提交</div>
+        </div>
+
+        <!-- 步骤 1 -->
+        <div id="capStep1">
+          <section class="panel">
+            <div class="panel__body">
+              <div class="dropzone" onclick="pickImage()">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-3)">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/>
+                </svg>
+                <span class="dropzone__title">拖入图片，或点击选择</span>
+                <span class="dropzone__desc">支持 JPG / PNG，可一次选多张 · 图片只在本机处理，不会上传原卷</span>
+              </div>
+              <p class="note mt12">框好一道题就在本机识别文字（浏览器内 OCR，图片不上传）。中文正文基本能认，公式、上下标、希腊字母经常出错，保存前请对着裁切图核对。</p>
+            </div>
+          </section>
+        </div>
+
+        <!-- 步骤 2 -->
+        <div id="capStep2" style="display:none">
+          <section class="panel">
+            <div class="panel__head">
+              <h2 class="panel__title">在图上拖拽，框出每道题</h2>
+              <span class="panel__hint" id="regionCount">已框 0 道</span>
+            </div>
+            <div class="panel__body">
+              <div class="paper-wrap">
+                <div class="paper" id="paper">
+                  <div class="paper__hint">按住鼠标拖出矩形 · 松手即生成一道题并开始识别</div>
+                </div>
+                <div>
+                  <div class="region-list" id="regionList"></div>
+                  <p class="note mt12">框小了（小于 20×20）会被忽略。框错了点缩略图右侧 × 重画。</p>
+                </div>
+              </div>
+              <div class="mt16" style="display:flex;justify-content:space-between;gap:10px">
+                <button class="btn btn--ghost" onclick="capStep(1)">‹ 重新选图</button>
+                <button class="btn btn--primary" id="toStep3" disabled onclick="capStep(3)">下一步：填写 0 道题</button>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- 步骤 3 -->
+        <div id="capStep3" style="display:none">
+          <div id="capCards"></div>
+          <div class="submitbar">
+            <div class="progress" id="capProgress"><span>未开始</span></div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn--ghost" onclick="capStep(2)">‹ 返回框选</button>
+              <button class="btn btn--primary" id="capSubmit" onclick="submitCapture()">保存 0 道题</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 复习卷列表 ========== -->
+    <section class="screen" id="s-review">
+      <div class="page">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">复习卷</h1>
+            <p class="page-desc">系统按得分率从低到高抽题，越薄弱越先出现。</p>
+          </div>
+          <div class="page-head__side">
+            <button class="btn btn--primary" onclick="go('reviewNew')">
+              <svg class="btn__icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+              生成复习卷
+            </button>
+          </div>
+        </div>
+
+        <section class="panel">
+          <div class="tabs" id="reviewTabs">
+            <button class="tab is-active" data-tab="0" onclick="setReviewTab(0)">待完成 <span class="tab__count"></span></button>
+            <button class="tab" data-tab="2" onclick="setReviewTab(2)">已完成 <span class="tab__count"></span></button>
+            <button class="tab" data-tab="3" onclick="setReviewTab(3)">已作废 <span class="tab__count"></span></button>
+          </div>
+          <div id="sheetList"></div>
+        </section>
+      </div>
+    </section>
+
+    <!-- ========== 生成复习卷 ========== -->
+    <section class="screen" id="s-reviewNew">
+      <div class="page" style="max-width:640px">
+        <div>
+          <a class="back" onclick="go('review')">‹ 返回复习卷</a>
+          <div class="page-head">
+            <div>
+              <h1 class="page-title">生成复习卷</h1>
+              <p class="page-desc">三个输入就够了，其余交给抽题规则。</p>
+            </div>
+          </div>
+        </div>
+
+        <section class="panel">
+          <div class="panel__body" style="display:flex;flex-direction:column;gap:16px">
+            <label class="field">
+              <span class="field__label">卷标题</span>
+              <input class="input" id="genTitle" value="复习卷 · 11-16 21:20">
+            </label>
+
+            <label class="field">
+              <span class="field__label">题量</span>
+              <input class="input" id="genCount" type="number" min="1" max="50" value="5" style="max-width:120px">
+              <span class="field__hint">1–50 题，默认 10。</span>
+            </label>
+
+            <div class="field">
+              <span class="field__label">范围</span>
+              <div style="display:flex;flex-direction:column;gap:6px" id="genScope">
+                <label class="quiz-option is-picked" onclick="setScope('all')">
+                  <input type="radio" name="scope" checked style="margin-top:3px">
+                  <span><b>全部题目</b><br><small style="color:var(--text-3)">从整个题库里抽，最薄弱优先。</small></span>
+                </label>
+                <label class="quiz-option" onclick="setScope('kp')">
+                  <input type="radio" name="scope" style="margin-top:3px">
+                  <span><b>按知识点</b><br><small style="color:var(--text-3)">只抽某个知识点下的题。</small></span>
+                </label>
+                <label class="quiz-option" onclick="setScope('tag')">
+                  <input type="radio" name="scope" style="margin-top:3px">
+                  <span><b>按标签</b><br><small style="color:var(--text-3)">按自由标签圈定范围。</small></span>
+                </label>
+              </div>
+              <select class="select mt8" id="genTarget" style="display:none"></select>
+            </div>
+
+            <p class="note">抽题规则：在当前范围内按题目得分率升序取题，没做过的题排在做过之后，同档按题目 ID 倒序。</p>
+
+            <div style="display:flex;justify-content:flex-end;gap:8px">
+              <button class="btn btn--ghost" onclick="go('review')">取消</button>
+              <button class="btn btn--primary" onclick="generateSheet()">生成并开始作答</button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <!-- ========== 作答 ========== -->
+    <section class="screen" id="s-quiz">
+      <div class="page" style="max-width:760px">
+        <div>
+          <a class="back" onclick="go('review')">‹ 返回复习卷</a>
+          <div class="page-head">
+            <div>
+              <h1 class="page-title" id="quizTitle">复习卷</h1>
+              <p class="page-desc" id="quizDesc"></p>
+            </div>
+            <div class="page-head__side">
+              <button class="btn btn--ghost btn--sm" onclick="cancelSheet()">作废</button>
+              <button class="btn btn--primary" onclick="openGrade()">交卷</button>
+            </div>
+          </div>
+        </div>
+        <div class="quiz-dots" id="quizDots"></div>
+        <div id="quizBody"></div>
+        <div class="quiz-foot">
+          <span class="quiz-note">答案自动暂存在本机（无保存接口），刷新不丢。</span>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn--sm" id="prevBtn" onclick="quizMove(-1)">上一题</button>
+            <button class="btn btn--sm btn--primary" id="nextBtn" onclick="quizMove(1)">下一题</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 结果 ========== -->
+    <section class="screen" id="s-result">
+      <div class="page">
+        <div>
+          <a class="back" onclick="go('review')">‹ 返回复习卷</a>
+          <div class="page-head">
+            <div>
+              <h1 class="page-title" id="resultTitle">复习卷</h1>
+              <p class="page-desc">交卷后的成绩。逐题得分来自作答记录。</p>
+            </div>
+            <div class="page-head__side">
+              <button class="btn btn--sm" onclick="go('reviewNew')">再生成一份</button>
+              <button class="btn btn--sm btn--danger" onclick="deleteSheet()">删除这份卷子</button>
+            </div>
+          </div>
+        </div>
+        <div id="resultBody"></div>
+      </div>
+    </section>
+
+    <!-- ========== 学情分析 ========== -->
+    <section class="screen" id="s-analysis">
+      <div class="page">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">学情分析</h1>
+            <p class="page-desc" id="anaDesc"></p>
+          </div>
+        </div>
+
+        <section class="panel">
+          <div class="panel__head">
+            <h2 class="panel__title">知识点掌握度</h2>
+            <span class="panel__hint">最薄弱在前</span>
+          </div>
+          <div class="panel__body panel__body--flush" id="anaKps"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel__head">
+            <h2 class="panel__title">标签掌握情况</h2>
+            <span class="panel__hint">按题目数倒序</span>
+          </div>
+          <div class="panel__body panel__body--flush" id="anaTags"></div>
+        </section>
+
+        <p class="note">得分率 = 累计得分 ÷ 累计满分。「未练习」表示从未产生过已评分的作答，和 0% 不是一回事。</p>
+      </div>
+    </section>
+
+    <!-- ========== 整理 ========== -->
+    <section class="screen" id="s-organize">
+      <div class="page">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">整理</h1>
+            <p class="page-desc">标签是自由维度，知识点是结构化维度（用于统计与抽题）。系统预置项不能修改。</p>
+          </div>
+        </div>
+
+        <section class="panel">
+          <div class="tabs">
+            <button class="tab is-active" id="orgTabTag" onclick="setOrgTab('tag')">标签</button>
+            <button class="tab" id="orgTabKp" onclick="setOrgTab('kp')">知识点</button>
+          </div>
+          <div class="toolbar">
+            <label class="search">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              <input id="orgSearch" type="search" placeholder="搜索名称…" oninput="renderOrganize()">
+            </label>
+            <input class="input" id="orgNew" placeholder="新建名称，回车提交" style="max-width:200px" onkeydown="if(event.key==='Enter')createOrg()">
+            <button class="btn btn--sm" onclick="createOrg()">新建</button>
+          </div>
+          <div id="orgMergeBar"></div>
+          <div id="orgList"></div>
+        </section>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- 遮罩 / 抽屉 / 弹窗 -->
+<div class="overlay" id="overlay" onclick="closeAll()"></div>
+
+<aside class="drawer" id="gradeDrawer">
+  <div class="drawer__head">
+    <div>
+      <div class="drawer__title">交卷前，给每题打个分</div>
+      <div class="drawer__desc">判分在客户端完成，接口只校验范围。不评分的题不计入总分。</div>
+    </div>
+    <button class="btn btn--ghost btn--sm" onclick="closeAll()">关闭</button>
+  </div>
+  <div class="drawer__body" id="gradeRows"></div>
+  <div class="drawer__foot">
+    <div class="grade-total">
+      <div><b id="gradeTotal">0 / 0</b> <span id="gradeRate"></span></div>
+      <span>满分默认 5，可改</span>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn--ghost" onclick="closeAll()">再检查一下</button>
+      <button class="btn btn--primary" style="flex:1" onclick="confirmSubmit()">确认交卷</button>
+    </div>
+  </div>
+</aside>
+
+<div class="modal" id="settingsModal">
+  <div class="modal__head"><div class="modal__title">设置</div></div>
+  <div class="modal__body">
+    <label class="field" style="margin-bottom:14px">
+      <span class="field__label">接口地址</span>
+      <input class="input" value="http://localhost:8080" id="apiUrl">
+      <span class="field__hint">留空表示与站点同源。</span>
+    </label>
+    <div class="field" style="margin-bottom:14px">
+      <span class="field__label">外观</span>
+      <div class="segmented">
+        <button onclick="setTheme('light')">浅色</button>
+        <button onclick="setTheme('dark')">深色</button>
+      </div>
+    </div>
+    <div class="kv"><span class="kv__k">本地作答草稿</span><span class="kv__v">3 份</span></div>
+    <div class="kv"><span class="kv__k">当前学生</span><span class="kv__v">1（demo 无登录）</span></div>
+  </div>
+  <div class="modal__foot">
+    <button class="btn btn--ghost" onclick="closeAll()">取消</button>
+    <button class="btn btn--primary" onclick="closeAll();toast('设置已保存')">保存</button>
+  </div>
+</div>
+
+<div class="modal" id="confirmModal">
+  <div class="modal__head"><div class="modal__title" id="confirmTitle">确认</div></div>
+  <div class="modal__body" id="confirmBody"></div>
+  <div class="modal__foot">
+    <button class="btn btn--ghost" onclick="closeAll()">取消</button>
+    <button class="btn btn--primary" id="confirmOk">确认</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ==================== 数据 ==================== */
+const state = {
+  screen: 'dashboard',
+  theme: 'light',
+  questions: [
+    {id:1, type:'单选', stem:'已知函数 f(x)=x²，则 f(1) 等于（　）', options:['1','2','4','8'], answer:'A', status:'resolved', createdAt:'11-16 18:10', source:'2026 秋期中考', tags:[{id:1,name:'三角函数'}], kps:[{id:1,name:'函数单调性'}], stat:{attempt:2,score:12,max:20}},
+    {id:2, type:'单选', stem:'若 sinα=3/5，且 α 为第二象限角，则 cosα=（　）', options:['4/5','-4/5','3/5','-3/5'], answer:'B', status:'unresolved', createdAt:'11-16 18:09', source:'', tags:[{id:1,name:'三角函数'}], kps:[{id:1,name:'三角恒等变换'}], stat:null},
+    {id:3, type:'解答', stem:'求函数 y=2sin(2x+π/3) 的最小正周期与单调递增区间。', options:[], answer:'周期 T=π；递增区间 [kπ−5π/12, kπ+π/12]，k∈Z。', status:'unresolved', createdAt:'11-15 21:40', source:'', tags:[], kps:[{id:1,name:'三角恒等变换'}], stat:null},
+    {id:4, type:'填空', stem:'已知向量 a=(1,2)，b=(3,−1)，则 a·b = ______。', options:[], answer:'1', status:'resolved', createdAt:'11-15 20:12', source:'', tags:[{id:2,name:'选择题'}], kps:[{id:4,name:'平面向量'}], stat:{attempt:1,score:5,max:5}},
+    {id:5, type:'单选', stem:'函数 f(x)=x³−3x 的极大值点为（　）', options:['x=−1','x=1','x=0','不存在'], answer:'A', status:'unresolved', createdAt:'11-14 19:30', source:'', tags:[{id:3,name:'导数'}], kps:[{id:2,name:'导数应用'}], stat:null},
+    {id:6, type:'多选', stem:'下列函数中，在 (0,+∞) 上单调递增的是（　）', options:['y=x²','y=1/x','y=ln x','y=e^(−x)'], answer:'A、C', status:'resolved', createdAt:'11-14 18:02', source:'', tags:[{id:2,name:'选择题'}], kps:[{id:3,name:'函数单调性'}], stat:{attempt:3,score:11,max:15}},
+    {id:7, type:'解答', stem:'已知数列 {aₙ} 满足 a₁=1，aₙ₊₁=2aₙ+1，求通项公式。', options:[], answer:'aₙ = 2ⁿ − 1', status:'unresolved', createdAt:'11-13 22:15', source:'', tags:[], kps:[{id:5,name:'数列通项'}], stat:null},
+    {id:8, type:'单选', stem:'若 log₂x = 3，则 x =（　）', options:['6','8','9','12'], answer:'B', status:'resolved', createdAt:'11-12 20:00', source:'', tags:[], kps:[{id:6,name:'对数运算'}], stat:{attempt:1,score:3,max:5}}
+  ],
+  tags: [
+    {id:1,name:'三角函数',sys:false,count:12,attempted:8,rate:.62},
+    {id:2,name:'选择题',sys:true,count:5,attempted:0,rate:null},
+    {id:3,name:'导数',sys:false,count:3,attempted:3,rate:.45},
+    {id:4,name:'数列',sys:false,count:2,attempted:1,rate:.5},
+    {id:5,name:'函数',sys:true,count:8,attempted:6,rate:.7}
+  ],
+  kps: [
+    {id:1,name:'三角恒等变换',sys:true,count:6,attempt:9,score:31,max:60,rate:.52},
+    {id:2,name:'导数应用',sys:false,count:3,attempt:0,score:0,max:0,rate:null},
+    {id:3,name:'函数单调性',sys:true,count:4,attempt:5,score:35,max:50,rate:.71},
+    {id:4,name:'平面向量',sys:false,count:1,attempt:1,score:5,max:5,rate:1},
+    {id:5,name:'数列通项',sys:false,count:2,attempt:2,score:8,max:10,rate:.8},
+    {id:6,name:'对数运算',sys:false,count:2,attempt:1,score:3,max:5,rate:.6}
+  ],
+  sheets: [
+    {id:41,title:'三角函数专项',status:0,count:5,created:'11-16 18:10',submitted:'',score:0,max:0,rate:null},
+    {id:40,title:'期中错题',status:0,count:4,created:'11-15 21:02',submitted:'',score:0,max:0,rate:null},
+    {id:39,title:'函数与导数',status:2,count:4,created:'11-14 19:00',submitted:'11-14 20:30',score:32,max:50,rate:.64},
+    {id:38,title:'数列专项',status:2,count:3,created:'11-12 18:00',submitted:'11-12 19:10',score:21,max:30,rate:.7},
+    {id:37,title:'向量练习',status:3,count:2,created:'11-10 10:00',submitted:'',score:0,max:0,rate:null}
+  ],
+  filter: {keyword:'', status:'', page:1, pageSize:5},
+  reviewTab: 0,
+  orgTab: 'tag',
+  renaming: null,
+  merging: null,
+  detailId: 1,
+  editing: false,
+  captureStep: 1,
+  regions: [],
+  capDraft: [],
+  quiz: {sheetId:41, index:0, answers:{}, grades:[]},
+  drafts: {},
+  result: null
+}
+
+const sheetQuestions = (sheet) => state.questions.slice(0, sheet.count)
+
+/* ==================== 路由 ==================== */
+const NAV_MAP = {dashboard:'dashboard', questions:'questions', detail:'questions', capture:null, review:'review', reviewNew:'review', quiz:'review', result:'review', analysis:'analysis', organize:'organize'}
+
+function go(screen){
+  state.screen = screen
+  document.querySelectorAll('.screen').forEach(el => el.classList.remove('is-active'))
+  const el = document.getElementById('s-' + screen)
+  if (el) el.classList.add('is-active')
+  document.querySelectorAll('.nav__item').forEach(el => {
+    el.classList.toggle('is-active', el.dataset.nav === NAV_MAP[screen])
+  })
+  window.scrollTo({top:0})
+  render(screen)
+}
+
+function render(screen){
+  if (screen === 'dashboard') renderDashboard()
+  if (screen === 'questions') renderQuestions()
+  if (screen === 'detail') renderDetail()
+  if (screen === 'review') renderSheets()
+  if (screen === 'quiz') renderQuiz()
+  if (screen === 'analysis') renderAnalysis()
+  if (screen === 'organize') renderOrganize()
+}
+
+/* ==================== 工作台 ==================== */
+function renderDashboard(){
+  const pending = state.questions.filter(q => q.status === 'unresolved').length
+  const todo = state.sheets.filter(s => s.status === 0).length
+  const rated = state.kps.filter(k => k.rate !== null)
+  const totalScore = rated.reduce((a,k) => a + k.score, 0)
+  const totalMax = rated.reduce((a,k) => a + k.max, 0)
+  const avg = totalMax > 0 ? Math.round(totalScore / totalMax * 100) : null
+
+  document.getElementById('dashDesc').textContent =
+    `今天有 ${todo} 份卷子没做，${pending} 道题待整理。`
+
+  document.getElementById('dashMetrics').innerHTML = `
+    <div class="metric" style="cursor:pointer" onclick="setStatusFilter('unresolved');go('questions')">
+      <div class="metric__label">待解决题目</div>
+      <div class="metric__value">${pending}</div>
+      <div class="metric__meta">点开看全部待整理</div>
+    </div>
+    <div class="metric" style="cursor:pointer" onclick="setReviewTab(0);go('review')">
+      <div class="metric__label">待完成复习卷</div>
+      <div class="metric__value">${todo}</div>
+      <div class="metric__meta">继续上次没做完的</div>
+    </div>
+    <div class="metric">
+      <div class="metric__label">累计得分率</div>
+      <div class="metric__value">${avg === null ? '—' : avg + '%'}</div>
+      <div class="metric__meta">${rated.length} 个知识点有作答</div>
+    </div>`
+
+  const sheets = state.sheets.filter(s => s.status === 0).slice(0,3)
+  document.getElementById('dashSheets').innerHTML = sheets.length ? sheets.map(s => `
+    <div class="row" onclick="openSheet(${s.id})">
+      <div class="row__body">
+        <div class="row__title">${s.title}</div>
+        <div class="row__meta"><span>${s.count} 题</span><span>·</span><span>${s.created}</span></div>
+      </div>
+      <div class="row__side"><span class="row__go">继续作答 ›</span></div>
+    </div>`).join('') : `<div class="empty"><div class="empty__title">没有待完成的卷子</div><div class="empty__desc">去生成一份，系统会挑你最薄弱的题。</div><div class="empty__action"><button class="btn btn--sm" onclick="go('reviewNew')">生成复习卷</button></div></div>`
+
+  const weak = state.kps.filter(k => k.rate !== null).sort((a,b) => a.rate - b.rate).slice(0,3)
+  document.getElementById('dashWeak').innerHTML = weak.length ? weak.map(k => `
+    <div class="row" onclick="quickPractice(${k.id})">
+      <div class="row__body">
+        <div class="row__title">${k.name}</div>
+        <div class="row__meta"><span>${k.count} 题 · ${k.attempt} 次</span></div>
+      </div>
+      <div class="row__side"><span class="rate">${Math.round(k.rate*100)}%</span><span class="row__go">练 ›</span></div>
+    </div>`).join('') : `<div class="empty"><div class="empty__title">还没有得分数据</div><div class="empty__desc">做完一份卷子并交卷后，这里会列出最薄弱的知识点。</div></div>`
+
+  const recent = [...state.questions].sort((a,b) => b.id - a.id).slice(0,4)
+  document.getElementById('dashRecent').innerHTML = recent.map(q => `
+    <div class="row" onclick="openDetail(${q.id})">
+      <div class="row__thumb"></div>
+      <div class="row__body">
+        <div class="row__title">${q.stem}</div>
+        <div class="row__meta"><span>${q.type}</span><span>·</span><span>${q.status === 'resolved' ? '已解决' : '待解决'}</span><span>·</span><span>${q.createdAt}</span></div>
+      </div>
+      <div class="row__side"><span class="row__go">打开 ›</span></div>
+    </div>`).join('')
+}
+
+/* ==================== 题库 ==================== */
+function filteredQuestions(){
+  let list = [...state.questions]
+  if (state.filter.keyword.trim()){
+    const k = state.filter.keyword.trim().toLowerCase()
+    list = list.filter(q => q.stem.toLowerCase().includes(k) || q.options.join(' ').toLowerCase().includes(k))
+  }
+  if (state.filter.status) list = list.filter(q => q.status === state.filter.status)
+  return list.sort((a,b) => b.id - a.id)
+}
+
+function renderQuestions(){
+  const list = filteredQuestions()
+  document.getElementById('qTotal').textContent = list.length
+  const total = list.length
+  const pages = Math.max(1, Math.ceil(total / state.filter.pageSize))
+  if (state.filter.page > pages) state.filter.page = pages
+  const start = (state.filter.page - 1) * state.filter.pageSize
+  const pageItems = list.slice(start, start + state.filter.pageSize)
+
+  document.getElementById('qNotice').innerHTML = state.filter.keyword.trim() ? `
+    <div class="notice">
+      <span>搜索模式 · 共 ${total} 条 · 结果只含题干与选项匹配</span>
+      <button class="link" onclick="clearSearch()">退出搜索</button>
+    </div>` : ''
+
+  document.getElementById('qList').innerHTML = pageItems.length ? pageItems.map(q => `
+    <div class="row" onclick="openDetail(${q.id})">
+      <div class="row__thumb"></div>
+      <div class="row__body">
+        <div class="row__title">${q.stem}</div>
+        <div class="row__meta">
+          <span>${q.type}</span><span>·</span>
+          <span class="${q.status === 'unresolved' ? 'badge' : 'badge badge--muted'}">${q.status === 'resolved' ? '已解决' : '待解决'}</span>
+          <span>·</span><span>${q.createdAt}</span>
+        </div>
+      </div>
+      <div class="row__side"><span class="row__go">打开 ›</span></div>
+    </div>`).join('') : `
+    <div class="empty">
+      <div class="empty__icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="m12 2 9 5-9 5-9-5 9-5z"/><path d="m3 12 9 5 9-5"/></svg>
+      </div>
+      <div class="empty__title">${state.filter.keyword.trim() ? '没搜到匹配的题目' : '这里还没有题目'}</div>
+      <div class="empty__desc">${state.filter.keyword.trim() ? '换个关键词，或退出搜索看全部。刚保存的题目可能需要 1 秒后才搜得到。' : '拍一张试卷，框出题目就能存进题库。'}</div>
+      <div class="empty__action">${state.filter.keyword.trim()
+        ? '<button class="btn btn--sm" onclick="clearSearch()">退出搜索</button>'
+        : '<button class="btn btn--sm btn--primary" onclick="go(\'capture\')">录入第一道题</button>'}</div>
+    </div>`
+
+  document.getElementById('qPager').innerHTML = total > state.filter.pageSize ? `
+    <div class="pager">
+      <span>第 ${state.filter.page} / ${pages} 页 · 每页 ${state.filter.pageSize} 条</span>
+      <div class="pager__btns">
+        <button ${state.filter.page === 1 ? 'disabled' : ''} onclick="setPage(${state.filter.page - 1})">‹</button>
+        ${Array.from({length:pages},(_,i)=>`<button class="${state.filter.page === i+1 ? 'is-active' : ''}" onclick="setPage(${i+1})">${i+1}</button>`).join('')}
+        <button ${state.filter.page === pages ? 'disabled' : ''} onclick="setPage(${state.filter.page + 1})">›</button>
+      </div>
+    </div>` : ''
+}
+
+function onSearch(v){ state.filter.keyword = v; state.filter.page = 1; renderQuestions() }
+function clearSearch(){ state.filter.keyword = ''; document.getElementById('qSearch').value = ''; state.filter.page = 1; renderQuestions() }
+function setStatusFilter(s){
+  state.filter.status = s; state.filter.page = 1
+  document.querySelectorAll('#qStatusSeg button').forEach(b => b.classList.remove('is-active'))
+  const idx = s === '' ? 0 : s === 'unresolved' ? 1 : 2
+  document.querySelectorAll('#qStatusSeg button')[idx].classList.add('is-active')
+  if (state.screen === 'questions') renderQuestions()
+}
+function setPage(p){ state.filter.page = p; renderQuestions() }
+
+/* ==================== 详情 ==================== */
+function openDetail(id){ state.detailId = id; state.editing = false; go('detail') }
+
+function renderDetail(){
+  const q = state.questions.find(x => x.id === state.detailId)
+  if (!q){ document.getElementById('detailBody').innerHTML = '<div class="empty"><div class="empty__title">这道题不存在</div><div class="empty__desc">可能已经被删除了。</div><div class="empty__action"><button class="btn btn--sm" onclick="go(\'questions\')">回题库</button></div></div>'; return }
+
+  document.getElementById('detailTitle').textContent = '题目 #' + q.id
+  document.getElementById('detailDesc').textContent = `${q.type} · ${q.createdAt} 入库`
+  document.getElementById('detailActions').innerHTML = state.editing
+    ? `<button class="btn btn--sm btn--ghost" onclick="toggleEdit()">取消</button>
+       <button class="btn btn--sm btn--primary" onclick="saveEdit()">保存</button>`
+    : `<button class="btn btn--sm" onclick="toggleEdit()">编辑</button>
+       <button class="btn btn--sm btn--danger" onclick="deleteQuestion(${q.id})">删除</button>`
+
+  const content = state.editing ? `
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <label class="field"><span class="field__label">题干</span>
+        <textarea class="input" id="editStem" rows="4">${q.stem}</textarea></label>
+      <div class="form-grid">
+        <label class="field"><span class="field__label">题型</span>
+          <select class="select" id="editType">
+            ${['单选','多选','填空','解答'].map(t => `<option ${t===q.type?'selected':''}>${t}</option>`).join('')}
+          </select></label>
+        <label class="field"><span class="field__label">来源</span>
+          <input class="input" id="editSource" value="${q.source || ''}" placeholder="如 2026 秋期中考"></label>
+      </div>
+      ${q.options.length ? `<div class="field"><span class="field__label">选项</span>
+        <div class="option-editor">${q.options.map((o,i)=>`
+          <div class="option-input"><span>${String.fromCharCode(65+i)}</span>
+          <input class="input" value="${o}" data-opt="${i}"></div>`).join('')}</div></div>` : ''}
+      <label class="field"><span class="field__label">答案</span>
+        <textarea class="input" id="editAnswer" rows="3">${q.answer || ''}</textarea></label>
+      <p class="note">只提交改动过的字段（接口用 null 表示「不修改」）。图片不能在这里换 —— 详情接口不返回图片 key，要换图只能重建题目。</p>
+    </div>`
+    : `
+      <div class="stem">${q.stem}</div>
+      ${q.options.length ? `<div class="options">${q.options.map((o,i)=>`
+        <div class="option"><span class="option__key">${String.fromCharCode(65+i)}</span><span>${o}</span></div>`).join('')}</div>` : ''}
+      <div class="answer-box">
+        <div class="answer-box__label">答案</div>
+        <div class="answer-box__body">${q.answer || '<span style="color:var(--text-3)">还没录答案</span>'}</div>
+      </div>`
+
+  const stat = q.stat
+  document.getElementById('detailBody').innerHTML = `
+    <div class="detail">
+      <section class="panel">
+        <div class="panel__head">
+          <h2 class="panel__title">题目</h2>
+          <span class="panel__hint">图片为预签名地址，30 分钟过期</span>
+        </div>
+        <div class="panel__body">
+          <div style="height:120px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--bg-app);background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:16px 16px;margin-bottom:16px"></div>
+          ${content}
+        </div>
+      </section>
+
+      <div>
+        <section class="panel" style="margin-bottom:16px">
+          <div class="panel__body" style="padding:6px 16px">
+            <div class="kv"><span class="kv__k">状态</span><span class="kv__v">
+              <button class="link" onclick="toggleStatus(${q.id})">${q.status === 'resolved' ? '已解决 · 点此改回' : '待解决 · 点此标记'}</button>
+            </span></div>
+            <div class="kv"><span class="kv__k">来源</span><span class="kv__v">${q.source || '—'}</span></div>
+            <div class="kv"><span class="kv__k">创建</span><span class="kv__v">${q.createdAt}</span></div>
+            <div class="kv"><span class="kv__k">得分率</span><span class="kv__v">${stat ? Math.round(stat.score/stat.max*100) + '% · ' + stat.attempt + ' 次' : '未练习'}</span></div>
+          </div>
+        </section>
+
+        <section class="panel" style="margin-bottom:16px">
+          <div class="side-block">
+            <div class="side-block__head">
+              <span class="side-block__title">标签</span>
+              <button class="link" onclick="togglePopover('tag')">+ 添加</button>
+            </div>
+            <div class="chip-row">
+              ${q.tags.length ? q.tags.map(t => `<span class="chip">${t.name}<span class="chip__x" onclick="removeTag(${q.id},${t.id})">×</span></span>`).join('') : '<span class="chip" style="border-style:dashed;color:var(--text-3)">未打标签</span>'}
+            </div>
+            <div class="popover" id="popTag" style="display:none">
+              ${state.tags.filter(t => !q.tags.some(x => x.id === t.id)).map(t => `<span class="chip chip--add" onclick="addTag(${q.id},${t.id})">${t.name}</span>`).join('') || '<span class="field__hint">没有可添加的标签</span>'}
+            </div>
+          </div>
+          <div class="side-block">
+            <div class="side-block__head">
+              <span class="side-block__title">知识点</span>
+              <button class="link" onclick="togglePopover('kp')">+ 添加</button>
+            </div>
+            <div class="chip-row">
+              ${q.kps.length ? q.kps.map(k => `<span class="chip">${k.name}<span class="chip__x" onclick="removeKp(${q.id},${k.id})">×</span></span>`).join('') : '<span class="chip" style="border-style:dashed;color:var(--text-3)">未关联知识点</span>'}
+            </div>
+            <div class="popover" id="popKp" style="display:none">
+              ${state.kps.filter(k => !q.kps.some(x => x.id === k.id)).map(k => `<span class="chip chip--add" onclick="addKp(${q.id},${k.id})">${k.name}</span>`).join('') || '<span class="field__hint">没有可添加的知识点</span>'}
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <section class="panel mt16">
+      <div class="panel__head">
+        <h2 class="panel__title">作答历史</h2>
+        <span class="panel__hint">${q.stat ? q.stat.attempt : 0} 条 · 接口无时间字段，按次数编号</span>
+      </div>
+      <div class="history">
+        ${q.stat ? Array.from({length:q.stat.attempt},(_,i)=>{
+          const n = q.stat.attempt - i
+          const sc = i === 0 ? Math.round(q.stat.score * .4) : Math.round(q.stat.score / Math.max(1,q.stat.attempt))
+          return `<div class="history__item"><span class="history__no">第 ${n} 次</span><span class="history__ans">我的答案：${['A','B','C'][i%3]}</span><span class="history__score">${sc} / ${q.stat.max/q.stat.attempt}</span></div>`
+        }).join('') : '<div class="empty" style="min-height:120px"><div class="empty__title">还没作答记录</div><div class="empty__desc">做一份包含这道题的复习卷并交卷后，这里会出现记录。</div></div>'}
+      </div>
+    </section>`
+}
+
+function toggleEdit(){ state.editing = !state.editing; renderDetail() }
+function saveEdit(){
+  const q = state.questions.find(x => x.id === state.detailId)
+  q.stem = document.getElementById('editStem').value
+  q.type = document.getElementById('editType').value
+  q.source = document.getElementById('editSource').value
+  q.answer = document.getElementById('editAnswer').value
+  document.querySelectorAll('[data-opt]').forEach(el => { q.options[+el.dataset.opt] = el.value })
+  state.editing = false
+  renderDetail()
+  toast('已保存 · 搜索索引稍后更新')
+}
+function toggleStatus(id){
+  const q = state.questions.find(x => x.id === id)
+  q.status = q.status === 'resolved' ? 'unresolved' : 'resolved'
+  renderDetail()
+  toast(q.status === 'resolved' ? '已标记为已解决' : '已改回待解决')
+}
+function togglePopover(kind){
+  const el = document.getElementById(kind === 'tag' ? 'popTag' : 'popKp')
+  el.style.display = el.style.display === 'none' ? 'flex' : 'none'
+}
+function addTag(qid, tid){
+  const q = state.questions.find(x => x.id === qid)
+  const t = state.tags.find(x => x.id === tid)
+  if (!q.tags.some(x => x.id === tid)) q.tags.push({id:t.id,name:t.name})
+  renderDetail(); toast('已挂上「' + t.name + '」')
+}
+function removeTag(qid, tid){
+  const q = state.questions.find(x => x.id === qid)
+  q.tags = q.tags.filter(x => x.id !== tid)
+  renderDetail(); toast('已摘掉标签')
+}
+function addKp(qid, kid){
+  const q = state.questions.find(x => x.id === qid)
+  const k = state.kps.find(x => x.id === kid)
+  if (!q.kps.some(x => x.id === kid)) q.kps.push({id:k.id,name:k.name})
+  renderDetail(); toast('已关联「' + k.name + '」')
+}
+function removeKp(qid, kid){
+  const q = state.questions.find(x => x.id === qid)
+  q.kps = q.kps.filter(x => x.id !== kid)
+  renderDetail(); toast('已解除关联')
+}
+function deleteQuestion(id){
+  confirmAction('删除这道题？', '删除后不可恢复，该题的作答记录与统计会一并删除。复习卷里的题目快照不受影响。', () => {
+    state.questions = state.questions.filter(q => q.id !== id)
+    closeAll(); go('questions'); toast('题目已删除')
+  })
+}
+
+/* ==================== 录入 ==================== */
+function pickImage(){
+  // 原型不真的读文件：直接进入框选步骤
+  if (state.regions.length === 0){
+    state.regions = [
+      {x:8,y:6,w:84,h:18},
+      {x:8,y:28,w:84,h:22},
+      {x:8,y:54,w:84,h:20}
+    ]
+  }
+  capStep(2)
+  toast('原型演示：已载入示例试卷图')
+}
+
+function capStep(n){
+  state.captureStep = n
+  document.getElementById('capStep1').style.display = n === 1 ? '' : 'none'
+  document.getElementById('capStep2').style.display = n === 2 ? '' : 'none'
+  document.getElementById('capStep3').style.display = n === 3 ? '' : 'none'
+  ;['st1','st2','st3'].forEach((id,i) => {
+    const el = document.getElementById(id)
+    el.classList.toggle('is-active', i + 1 === n)
+    el.classList.toggle('is-done', i + 1 < n)
+  })
+  if (n === 2) drawPaper()
+  if (n === 3) renderCaptureCards()
+}
+
+function drawPaper(){
+  const paper = document.getElementById('paper')
+  paper.querySelectorAll('.region').forEach(el => el.remove())
+  state.regions.forEach((r,i) => {
+    const d = document.createElement('div')
+    d.className = 'region'
+    d.style.cssText = `left:${r.x}%;top:${r.y}%;width:${r.w}%;height:${r.h}%`
+    d.innerHTML = `<span class="region__no">${i+1}</span>`
+    paper.appendChild(d)
+  })
+  document.getElementById('regionCount').textContent = `已框 ${state.regions.length} 道`
+  const btn = document.getElementById('toStep3')
+  btn.disabled = state.regions.length === 0
+  btn.textContent = `下一步：填写 ${state.regions.length} 道题`
+
+  document.getElementById('regionList').innerHTML = state.regions.length ? state.regions.map((r,i) => `
+    <div class="region-card">
+      <div class="region-card__thumb"></div>
+      <div class="region-card__meta">题目 ${i+1}<br><span style="color:var(--text-3)">${Math.round(r.w)}% × ${Math.round(r.h)}%</span></div>
+      <button class="btn btn--ghost btn--sm" onclick="removeRegion(${i})">×</button>
+    </div>`).join('') : '<p class="field__hint">还没有框选。在左边的图上拖出矩形。</p>'
+}
+
+function removeRegion(i){
+  state.regions.splice(i,1)
+  drawPaper()
+}
+
+// 在试卷图上拖拽画框
+(function initPaperDrag(){
+  let start = null, ghost = null
+  document.addEventListener('mousedown', e => {
+    const paper = e.target.closest('#paper')
+    if (!paper || e.target.classList.contains('region') || e.target.classList.contains('region__no')) return
+    const rect = paper.getBoundingClientRect()
+    start = {x:(e.clientX-rect.left)/rect.width*100, y:(e.clientY-rect.top)/rect.height*100}
+    ghost = document.createElement('div')
+    ghost.className = 'ghost'
+    paper.appendChild(ghost)
+    e.preventDefault()
+  })
+  document.addEventListener('mousemove', e => {
+    if (!start || !ghost) return
+    const paper = document.getElementById('paper')
+    const rect = paper.getBoundingClientRect()
+    const cx = Math.min(100, Math.max(0, (e.clientX-rect.left)/rect.width*100))
+    const cy = Math.min(100, Math.max(0, (e.clientY-rect.top)/rect.height*100))
+    const x = Math.min(start.x,cx), y = Math.min(start.y,cy)
+    const w = Math.abs(cx-start.x), h = Math.abs(cy-start.y)
+    ghost.style.cssText = `left:${x}%;top:${y}%;width:${w}%;height:${h}%`
+  })
+  document.addEventListener('mouseup', e => {
+    if (!start || !ghost) return
+    const paper = document.getElementById('paper')
+    const rect = paper.getBoundingClientRect()
+    const cx = Math.min(100, Math.max(0, (e.clientX-rect.left)/rect.width*100))
+    const cy = Math.min(100, Math.max(0, (e.clientY-rect.top)/rect.height*100))
+    const x = Math.min(start.x,cx), y = Math.min(start.y,cy)
+    const w = Math.abs(cx-start.x), h = Math.abs(cy-start.y)
+    ghost.remove(); ghost = null; start = null
+    if (w < 6 || h < 4) return   // 太小的框忽略
+    state.regions.push({x,y,w,h})
+    drawPaper()
+  })
+})()
+
+function renderCaptureCards(){
+  const wrap = document.getElementById('capCards')
+  wrap.innerHTML = state.regions.map((r,i) => `
+    <div class="q-card">
+      <div class="q-card__head">
+        <span class="q-card__no">${i+1}</span>
+        <span style="font-size:12px;color:var(--text-2)">第 ${i+1} 题</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--text-3)">裁切图 · ${Math.round(r.w)}% × ${Math.round(r.h)}%</span>
+      </div>
+      <div class="q-card__body">
+        <div class="q-card__thumb"></div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <label class="field"><span class="field__label">题干</span>
+            <textarea class="input" rows="2" data-stem="${i}" placeholder="输入题干，支持 $…$ 公式原文"></textarea></label>
+          <div class="form-grid">
+            <label class="field"><span class="field__label">题型</span>
+              <select class="select" data-type="${i}" onchange="onTypeChange(${i},this.value)">
+                <option>单选</option><option>多选</option><option>填空</option><option>解答</option>
+              </select></label>
+            <label class="field"><span class="field__label">答案（可选）</span>
+              <input class="input" data-answer="${i}" placeholder="建题后再写入"></label>
+          </div>
+          <div class="option-editor" data-options="${i}">
+            ${['A','B','C','D'].map((k,j)=>`
+              <div class="option-input"><span>${k}</span><input class="input" data-opt-of="${i}" placeholder="选项内容"></div>`).join('')}
+          </div>
+          <div class="chip-row">
+            ${state.tags.slice(0,4).map(t=>`<span class="chip chip--add" onclick="this.classList.toggle('chip--on')">${t.name}</span>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>`).join('')
+
+  document.getElementById('capSubmit').textContent = `保存 ${state.regions.length} 道题`
+  document.getElementById('capProgress').innerHTML = '<span>未开始</span>'
+}
+
+function onTypeChange(i, v){
+  const box = document.querySelector(`[data-options="${i}"]`)
+  if (box) box.style.display = (v === '单选' || v === '多选') ? 'grid' : 'none'
+}
+
+function submitCapture(){
+  const n = state.regions.length
+  const btn = document.getElementById('capSubmit')
+  btn.disabled = true
+  let done = 0
+  const prog = document.getElementById('capProgress')
+  const tick = setInterval(() => {
+    done++
+    prog.innerHTML = `<span>正在保存 ${done} / ${n}</span><span class="progress__bar"><i style="width:${done/n*100}%"></i></span>`
+    if (done >= n){
+      clearInterval(tick)
+      prog.innerHTML = `<span>成功 ${n} · 失败 0</span>`
+      btn.disabled = false
+      toast(`已存入 ${n} 道题`)
+      setTimeout(() => {
+        state.regions = []
+        state.captureStep = 1
+        capStep(1)
+        go('questions')
+      }, 700)
+    }
+  }, 320)
+}
+
+/* ==================== 复习卷列表 ==================== */
+function setReviewTab(s){ state.reviewTab = s; if (state.screen === 'review') renderSheets() }
+
+function renderSheets(){
+  document.querySelectorAll('#reviewTabs .tab').forEach(t => t.classList.toggle('is-active', +t.dataset.tab === state.reviewTab))
+  const counts = [0,2,3].map(s => state.sheets.filter(x => x.status === s).length)
+  document.querySelectorAll('#reviewTabs .tab__count').forEach((el,i) => el.textContent = counts[i])
+
+  const list = state.sheets.filter(s => s.status === state.reviewTab).sort((a,b) => b.id - a.id)
+  const map = {0:'待完成', 2:'已完成', 3:'已作废'}
+
+  document.getElementById('sheetList').innerHTML = list.length ? list.map(s => `
+    <div class="sheet-card" onclick="${s.status === 2 ? `openResult(${s.id})` : s.status === 0 ? `openSheet(${s.id})` : `toast('已作废的卷子只能查看')`}">
+      <div class="sheet-card__body">
+        <div class="sheet-card__title">${s.title}</div>
+        <div class="sheet-card__meta">${s.count} 题 · ${s.status === 2 ? s.submitted + ' 交卷' : s.created}</div>
+      </div>
+      ${s.status === 2
+        ? `<div class="sheet-card__rate"><b>${Math.round(s.rate*100)}%</b><span class="sheet-card__meta">${s.score} / ${s.max}</span></div>`
+        : `<span class="${s.status === 0 ? 'badge' : 'badge badge--muted'}">${map[s.status]}</span>`}
+      <div class="row__side" style="min-width:70px;justify-content:flex-end">
+        <span class="row__go">${s.status === 2 ? '查看结果 ›' : s.status === 0 ? '继续作答 ›' : ''}</span>
+      </div>
+    </div>`).join('') : `
+    <div class="empty">
+      <div class="empty__icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+      </div>
+      <div class="empty__title">${state.reviewTab === 0 ? '没有待完成的卷子' : state.reviewTab === 2 ? '还没有交过卷' : '没有作废的卷子'}</div>
+      <div class="empty__desc">${state.reviewTab === 0 ? '生成一份复习卷，系统会按得分率从低到高抽题。' : ''}</div>
+      ${state.reviewTab === 0 ? '<div class="empty__action"><button class="btn btn--sm btn--primary" onclick="go(\'reviewNew\')">生成复习卷</button></div>' : ''}
+    </div>`
+}
+
+function openSheet(id){
+  const s = state.sheets.find(x => x.id === id)
+  // 模拟 localStorage 草稿：同一份卷子反复进入不丢答案
+  if (!state.drafts[id]) state.drafts[id] = {}
+  state.quiz = {sheetId:id, index:0, answers:state.drafts[id], grades:[]}
+  state.quizItems = sheetQuestions(s)
+  go('quiz')
+}
+
+function openResult(id){
+  const s = state.sheets.find(x => x.id === id)
+  state.result = {
+    sheet: s,
+    items: sheetQuestions(s).map((q,i) => ({
+      qid: q.id, stem: q.stem,
+      myAnswer: ['A','B','C','D'][i%4],
+      score: i === 2 ? null : Math.max(0, 5 - i),
+      max: 5
+    }))
+  }
+  go('result')
+}
+
+/* ==================== 生成 ==================== */
+let genScope = 'all'
+function setScope(s){
+  genScope = s
+  document.querySelectorAll('#genScope .quiz-option').forEach((el,i) => {
+    const map = ['all','kp','tag']
+    el.classList.toggle('is-picked', map[i] === s)
+    el.querySelector('input').checked = map[i] === s
+  })
+  const sel = document.getElementById('genTarget')
+  if (s === 'all'){ sel.style.display = 'none'; return }
+  sel.style.display = ''
+  const items = s === 'kp' ? state.kps.filter(k => k.count > 0) : state.tags.filter(t => t.count > 0)
+  sel.innerHTML = items.map(x => `<option value="${x.id}">${x.name}（${x.count} 题）</option>`).join('')
+}
+function quickPractice(kpId){
+  go('reviewNew')
+  setScope('kp')
+  setTimeout(() => { document.getElementById('genTarget').value = kpId }, 0)
+}
+
+function generateSheet(){
+  const count = Math.max(1, Math.min(50, +document.getElementById('genCount').value || 10))
+  const title = document.getElementById('genTitle').value.trim() || '复习卷'
+  const id = Math.max(...state.sheets.map(s => s.id)) + 1
+  const sheet = {id, title, status:0, count: Math.min(count, state.questions.length), created:'11-16 21:20', submitted:'', score:0, max:0, rate:null}
+  state.sheets.unshift(sheet)
+  toast('已生成，共 ' + sheet.count + ' 题')
+  openSheet(id)
+}
+
+/* ==================== 作答 ==================== */
+function renderQuiz(){
+  const s = state.sheets.find(x => x.id === state.quiz.sheetId)
+  const items = state.quizItems || sheetQuestions(s)
+  const q = items[state.quiz.index]
+  document.getElementById('quizTitle').textContent = s.title
+  document.getElementById('quizDesc').textContent = `${items.length} 题 · 答案暂存在本机`
+
+  document.getElementById('quizDots').innerHTML = items.map((item,i) => {
+    const done = state.quiz.answers[item.id] !== undefined && state.quiz.answers[item.id] !== ''
+    return `<button class="quiz-dot ${done ? 'is-done' : ''} ${i === state.quiz.index ? 'is-current' : ''}" onclick="quizGo(${i})">${i+1}</button>`
+  }).join('')
+
+  const ans = state.quiz.answers[q.id]
+  const isChoice = q.options.length > 0
+  document.getElementById('quizBody').innerHTML = `
+    <div class="quiz-card">
+      <div class="quiz-card__no">第 ${state.quiz.index + 1} 题 · ${q.type}</div>
+      <div class="stem">${q.stem}</div>
+      <div style="height:100px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--bg-app);background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:16px 16px;margin-top:14px"></div>
+      ${isChoice ? `<div class="quiz-options">
+        ${q.options.map((o,i) => {
+          const key = String.fromCharCode(65+i)
+          return `<button class="quiz-option ${ans === key ? 'is-picked' : ''}" onclick="pickAnswer('${key}')">
+            <span class="quiz-option__key">${key}</span><span>${o}</span></button>`
+        }).join('')}
+      </div>` : `<textarea class="input mt16" rows="5" placeholder="写下你的解答…" oninput="state.quiz.answers[${q.id}]=this.value">${ans || ''}</textarea>`}
+      <div style="margin-top:14px">
+        <a class="link" onclick="openDetail(${q.id})">在题库中打开这道题 ›</a>
+        <span class="field__hint" style="margin-left:8px">标准答案只在题库详情里</span>
+      </div>
+    </div>`
+
+  document.getElementById('prevBtn').disabled = state.quiz.index === 0
+  document.getElementById('nextBtn').disabled = state.quiz.index === items.length - 1
+}
+
+function quizGo(i){ state.quiz.index = i; renderQuiz() }
+function quizMove(d){
+  const items = state.quizItems
+  const next = state.quiz.index + d
+  if (next >= 0 && next < items.length) quizGo(next)
+}
+function pickAnswer(key){
+  const q = state.quizItems[state.quiz.index]
+  state.quiz.answers[q.id] = key
+  renderQuiz()
+}
+
+function cancelSheet(){
+  confirmAction('作废这份卷子？', '作废后不能继续作答，也不能交卷。已提交的卷子不允许作废。', () => {
+    const s = state.sheets.find(x => x.id === state.quiz.sheetId)
+    s.status = 3
+    closeAll(); go('review'); toast('已作废')
+  })
+}
+
+/* ==================== 评分抽屉 ==================== */
+function openGrade(){
+  const items = state.quizItems
+  if (!state.quiz.grades.length){
+    state.quiz.grades = items.map(q => ({qid:q.id, max:5, score:5, skip:false}))
+  }
+  document.getElementById('gradeRows').innerHTML = items.map((q,i) => {
+    const g = state.quiz.grades[i]
+    const ans = state.quiz.answers[q.id] || '未作答'
+    return `
+      <div class="grade-row">
+        <div class="grade-row__head">
+          <span class="grade-row__no">${i+1}</span>
+          <span class="grade-row__ans">我的答案：${ans}</span>
+          <span style="font-size:11px;color:var(--text-3)">满分</span>
+          <input class="mini-input" type="number" min="1" value="${g.max}" onchange="setMax(${i},this.value)">
+        </div>
+        <div class="grade-row__ctrl">
+          <input type="range" min="0" max="${g.max}" step="0.5" value="${g.skip ? 0 : g.score}" ${g.skip ? 'disabled' : ''} oninput="onRange(${i},this.value)" onchange="openGrade()">
+          <input class="mini-input" id="scoreNum${i}" type="number" value="${g.skip ? '' : g.score}" ${g.skip ? 'disabled' : ''} onchange="setScore(${i},this.value)">
+          <div class="quick">
+            <button class="${!g.skip && g.score === g.max ? 'is-on' : ''}" onclick="quickScore(${i},1)">全对</button>
+            <button class="${!g.skip && g.score > 0 && g.score < g.max ? 'is-on' : ''}" onclick="quickScore(${i},.5)">半对</button>
+            <button class="${!g.skip && g.score === 0 ? 'is-on' : ''}" onclick="quickScore(${i},0)">零分</button>
+            <button class="${g.skip ? 'is-on' : ''}" onclick="quickScore(${i},'skip')">不评分</button>
+          </div>
+        </div>
+      </div>`
+  }).join('')
+  updateGradeTotal()
+  document.getElementById('overlay').classList.add('is-open')
+  document.getElementById('gradeDrawer').classList.add('is-open')
+}
+
+function setMax(i,v){
+  const g = state.quiz.grades[i]
+  g.max = Math.max(1, +v || 5)
+  if (g.score > g.max) g.score = g.max
+  openGrade()
+}
+/** 拖动滑块时只更新数字与合计，不重绘整个抽屉（否则拖到一半会断） */
+function onRange(i,v){
+  const g = state.quiz.grades[i]
+  g.skip = false
+  g.score = Math.max(0, Math.min(g.max, +v || 0))
+  const num = document.getElementById('scoreNum' + i)
+  if (num) num.value = g.score
+  updateGradeTotal()
+}
+function setScore(i,v){
+  const g = state.quiz.grades[i]
+  g.score = Math.max(0, Math.min(g.max, +v || 0))
+  g.skip = false
+  openGrade()
+}
+function quickScore(i,mode){
+  const g = state.quiz.grades[i]
+  if (mode === 'skip'){ g.skip = true; g.score = 0 }
+  else { g.skip = false; g.score = mode === 1 ? g.max : mode === .5 ? g.max/2 : 0 }
+  openGrade()
+}
+function updateGradeTotal(){
+  const active = state.quiz.grades.filter(g => !g.skip)
+  const score = active.reduce((a,g) => a + g.score, 0)
+  const max = active.reduce((a,g) => a + g.max, 0)
+  document.getElementById('gradeTotal').textContent = `${score} / ${max}`
+  document.getElementById('gradeRate').textContent = max > 0 ? `得分率 ${Math.round(score/max*100)}%` : '没有评分的题'
+}
+
+function confirmSubmit(){
+  const s = state.sheets.find(x => x.id === state.quiz.sheetId)
+  const active = state.quiz.grades.filter(g => !g.skip)
+  const score = active.reduce((a,g) => a + g.score, 0)
+  const max = active.reduce((a,g) => a + g.max, 0)
+  s.status = 2
+  s.score = score
+  s.max = max
+  s.rate = max > 0 ? score / max : null
+  s.submitted = '11-16 21:24'
+
+  state.result = {
+    sheet: s,
+    items: state.quizItems.map((q,i) => ({
+      qid: q.id, stem: q.stem,
+      myAnswer: state.quiz.answers[q.id] || '',
+      score: state.quiz.grades[i].skip ? null : state.quiz.grades[i].score,
+      max: state.quiz.grades[i].max
+    }))
+  }
+  closeAll()
+  go('result')
+  toast('已交卷')
+}
+
+/* ==================== 结果 ==================== */
+function renderResult(){
+  const {sheet, items} = state.result
+  const rated = items.filter(i => i.score !== null)
+  const score = rated.reduce((a,i) => a + i.score, 0)
+  const max = rated.reduce((a,i) => a + i.max, 0)
+  const rate = max > 0 ? Math.round(score/max*100) : null
+
+  document.getElementById('resultTitle').textContent = sheet.title
+  document.getElementById('resultBody').innerHTML = `
+    <div class="score-hero">
+      <div class="score-hero__rate">${rate === null ? '—' : rate + '%'}</div>
+      <div class="score-hero__meta">
+        <b>${score} / ${max}</b>
+        <span>${sheet.count} 题 · ${sheet.submitted || '刚刚'} 交卷</span>
+        <span>${items.filter(i => i.score === null).length} 题未评分，不计入总分</span>
+      </div>
+    </div>
+
+    <section class="panel mt16">
+      <div class="panel__head">
+        <h2 class="panel__title">逐题明细</h2>
+        <span class="panel__hint">答案不在这里 —— 点「原题」看</span>
+      </div>
+      ${items.map((it,i) => `
+        <div class="result-row">
+          <span class="result-row__no">${i+1}</span>
+          <span class="result-row__stem">${it.stem}</span>
+          <span class="result-row__ans">${it.myAnswer || '未作答'}</span>
+          <span class="result-row__score ${it.score === null ? 'is-skip' : ''}">${it.score === null ? '未评分' : it.score + ' / ' + it.max}</span>
+          <a class="link" onclick="openDetail(${it.qid})">原题 ›</a>
+        </div>`).join('')}
+    </section>
+
+    <p class="note mt16">接口 O2 不返回答案快照，所以结果页只能显示你自己的答案和自评分数。要看正确答案，点每行的「原题」。</p>`
+}
+
+function deleteSheet(){
+  confirmAction('删除这份复习卷？', '卷子会连同卷内题目一起删除；作答记录会保留在学情历史里，但这张卷的成绩不再单独存在。', () => {
+    state.sheets = state.sheets.filter(s => s.id !== state.result.sheet.id)
+    closeAll(); go('review'); toast('复习卷已删除')
+  })
+}
+
+/* ==================== 分析 ==================== */
+function renderAnalysis(){
+  const rated = state.kps.filter(k => k.rate !== null)
+  const avg = rated.length ? Math.round(rated.reduce((a,k)=>a+k.score,0) / rated.reduce((a,k)=>a+k.max,0) * 100) : null
+  document.getElementById('anaDesc').textContent =
+    `${state.kps.length} 个知识点 · ${rated.length} 个练过 · ${avg === null ? '还没有数据' : '平均得分率 ' + avg + '%'}`
+
+  const sorted = [...state.kps].sort((a,b) => {
+    if (a.rate === null) return 1
+    if (b.rate === null) return -1
+    return a.rate - b.rate
+  })
+
+  document.getElementById('anaKps').innerHTML = sorted.map(k => `
+    <div class="kp-row">
+      <div>
+        <div class="kp-row__name">${k.name}${k.sys ? ' <span class="badge badge--muted" style="margin-left:4px">系统</span>' : ''}</div>
+        <div class="kp-row__meta">${k.count} 题 · ${k.attempt} 次作答</div>
+      </div>
+      <div class="rate" style="text-align:right">${k.rate === null ? '<span style="color:var(--text-3);font-weight:400">未练习</span>' : Math.round(k.rate*100)+'%'}</div>
+      <div class="kp-row__meter">
+        <div class="meter ${k.rate === null ? 'meter--empty' : ''}" style="flex:1"><i style="width:${k.rate === null ? 0 : k.rate*100}%"></i></div>
+      </div>
+      <div class="kp-row__act" style="text-align:right">
+        <button class="btn btn--sm" onclick="quickPractice(${k.id})">专项练习</button>
+      </div>
+    </div>`).join('')
+
+  document.getElementById('anaTags').innerHTML = [...state.tags].sort((a,b)=>b.count-a.count).map(t => `
+    <div class="tag-row">
+      <span>${t.name}${t.sys ? ' <span class="badge badge--muted" style="margin-left:4px">系统</span>' : ''}</span>
+      <span style="text-align:right;font-size:11.5px;color:var(--text-3)">${t.count} 题</span>
+      <div class="tag-row__meter">
+        <div class="meter ${t.rate === null ? 'meter--empty' : ''}" style="flex:1"><i style="width:${t.rate === null ? 0 : t.rate*100}%"></i></div>
+        <span style="font-size:11.5px;min-width:42px;text-align:right;font-variant-numeric:tabular-nums">${t.rate === null ? '<span style="color:var(--text-3)">未练习</span>' : Math.round(t.rate*100)+'%'}</span>
+      </div>
+      <span style="text-align:right"><a class="link" onclick="go('reviewNew');setScope('tag')">按此组卷 ›</a></span>
+    </div>`).join('')
+}
+
+/* ==================== 整理 ==================== */
+function setOrgTab(t){
+  state.orgTab = t
+  state.renaming = null; state.merging = null
+  document.getElementById('orgTabTag').classList.toggle('is-active', t === 'tag')
+  document.getElementById('orgTabKp').classList.toggle('is-active', t === 'kp')
+  document.getElementById('orgSearch').value = ''
+  renderOrganize()
+}
+
+function renderOrganize(){
+  const isTag = state.orgTab === 'tag'
+  const items = isTag ? state.tags : state.kps
+  const keyword = (document.getElementById('orgSearch').value || '').trim()
+
+  document.getElementById('orgMergeBar').innerHTML = state.merging ? `
+    <div class="merge-bar">
+      <span>把「${items.find(x=>x.id===state.merging)?.name}」并入</span>
+      <select class="select" id="mergeTarget" style="height:28px;max-width:180px">
+        ${items.filter(x => x.id !== state.merging).map(x => `<option value="${x.id}">${x.name}</option>`).join('')}
+      </select>
+      <button class="btn btn--sm btn--primary" onclick="doMerge()">确认合并</button>
+      <button class="btn btn--sm btn--ghost" onclick="state.merging=null;renderOrganize()">取消</button>
+    </div>` : ''
+
+  const list = keyword ? items.filter(x => x.name.includes(keyword)) : [...items].sort((a,b) => b.count - a.count)
+
+  document.getElementById('orgList').innerHTML = list.length ? list.map(x => {
+    const renaming = state.renaming === x.id
+    return `
+      <div class="org-row">
+        <div class="org-row__name">
+          ${renaming
+            ? `<input class="inline-input" id="renameInput" value="${x.name}" onkeydown="if(event.key==='Enter')doRename(${x.id});if(event.key==='Escape'){state.renaming=null;renderOrganize()}">`
+            : `<span>${x.name}</span>`}
+          ${x.sys ? '<span class="badge badge--muted">系统</span>' : ''}
+          ${x.rate !== undefined ? `<span style="font-size:11px;color:var(--text-3)">${x.rate === null ? '未练习' : Math.round(x.rate*100)+'%'}</span>` : ''}
+        </div>
+        <div class="org-row__count">${x.count} 题</div>
+        <div class="org-row__ops">
+          ${renaming
+            ? `<button onclick="doRename(${x.id})">保存</button><button onclick="state.renaming=null;renderOrganize()">取消</button>`
+            : `<button ${x.sys ? 'disabled' : ''} onclick="startRename(${x.id})">改名</button>
+               ${isTag ? `<button ${x.sys ? 'disabled' : ''} onclick="startMerge(${x.id})">合并</button>` : ''}
+               <button ${x.sys ? 'disabled' : ''} onclick="deleteOrg(${x.id})">删除</button>`}
+        </div>
+      </div>`
+  }).join('') : `<div class="empty"><div class="empty__title">没有匹配的${isTag ? '标签' : '知识点'}</div><div class="empty__desc">换个关键词，或直接新建一个。</div></div>`
+
+  if (state.renaming){ const el = document.getElementById('renameInput'); if (el){ el.focus(); el.select() } }
+}
+
+function startRename(id){ state.renaming = id; renderOrganize() }
+function doRename(id){
+  const items = state.orgTab === 'tag' ? state.tags : state.kps
+  const x = items.find(i => i.id === id)
+  const v = document.getElementById('renameInput').value.trim()
+  if (!v){ toast('名称不能为空'); return }
+  x.name = v
+  state.renaming = null
+  renderOrganize(); toast('已改名')
+}
+function startMerge(id){ state.merging = id; renderOrganize() }
+function doMerge(){
+  const target = +document.getElementById('mergeTarget').value
+  const from = state.tags.find(t => t.id === state.merging)
+  const to = state.tags.find(t => t.id === target)
+  to.count += from.count
+  state.tags = state.tags.filter(t => t.id !== from.id)
+  state.merging = null
+  renderOrganize(); toast(`「${from.name}」已并入「${to.name}」`)
+}
+function deleteOrg(id){
+  const isTag = state.orgTab === 'tag'
+  const items = isTag ? state.tags : state.kps
+  const x = items.find(i => i.id === id)
+  confirmAction(`删除${isTag ? '标签' : '知识点'}「${x.name}」？`,
+    isTag ? '只会解除它与题目的关联，题目本身不会被删除。' : '只会解除关联，题目本身与作答记录都保留。', () => {
+      if (isTag) state.tags = state.tags.filter(t => t.id !== id)
+      else state.kps = state.kps.filter(k => k.id !== id)
+      closeAll(); renderOrganize(); toast('已删除')
+    })
+}
+function createOrg(){
+  const el = document.getElementById('orgNew')
+  const v = el.value.trim()
+  if (!v){ toast('名称不能为空'); return }
+  const isTag = state.orgTab === 'tag'
+  const items = isTag ? state.tags : state.kps
+  if (items.some(x => x.name === v)){ toast('已存在同名' + (isTag ? '标签' : '知识点')); return }
+  const id = Math.max(...items.map(x => x.id)) + 1
+  items.push({id, name:v, sys:false, count:0, attempt:0, score:0, max:0, rate:null})
+  el.value = ''
+  renderOrganize(); toast('已创建')
+}
+
+/* ==================== 弹层 ==================== */
+function confirmAction(title, body, onOk){
+  document.getElementById('confirmTitle').textContent = title
+  document.getElementById('confirmBody').textContent = body
+  document.getElementById('confirmOk').onclick = onOk
+  document.getElementById('overlay').classList.add('is-open')
+  document.getElementById('confirmModal').classList.add('is-open')
+}
+function openSettings(){
+  document.getElementById('overlay').classList.add('is-open')
+  document.getElementById('settingsModal').classList.add('is-open')
+}
+function closeAll(){
+  document.getElementById('overlay').classList.remove('is-open')
+  document.querySelectorAll('.modal,.drawer').forEach(el => el.classList.remove('is-open'))
+}
+
+let toastTimer = null
+function toast(msg){
+  const el = document.getElementById('toast')
+  el.textContent = msg
+  el.classList.add('is-open')
+  clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => el.classList.remove('is-open'), 2200)
+}
+
+/* ==================== 主题 ==================== */
+function applyTheme(t){
+  state.theme = t
+  document.documentElement.dataset.theme = t
+  document.getElementById('themeBtn').textContent = t === 'dark' ? '浅色' : '深色'
+}
+function toggleTheme(){ applyTheme(state.theme === 'dark' ? 'light' : 'dark') }
+function setTheme(t){ applyTheme(t); toast('外观已切换') }
+
+/* ==================== 启动 ==================== */
+applyTheme(window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+go('dashboard')
+</script>
+</body>
+</html>

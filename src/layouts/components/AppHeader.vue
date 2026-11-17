@@ -1,225 +1,105 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import AppIcon from '@/components/common/AppIcon.vue'
-import { useMenuGroups } from '@/router/menu'
 import { useTheme } from '@/composables/useTheme'
-import { useAccount } from '@/composables/useAccount'
-import { loggedIn } from '@/api/session'
+import { useConfig } from '@/config'
+import { navAlias, primaryNav, secondaryNav } from '@/router/nav'
+
+/**
+ * 顶栏：品牌 + 主导航 + 全局主行动 + 主题 + 设置。
+ *
+ * 导航放顶栏而不是侧栏：本站只有 5 个目的地，一层就放得下。
+ * 侧栏 240px 宽，为了 5 个链接长期占掉 17% 的横向空间，不划算。
+ *
+ * 仍然不放搜索（搜索只对题库有意义，题库页自己有），
+ * 不放「已登录」之类后端根本没有的东西。
+ */
+const emit = defineEmits<{ (e: 'open-settings'): void }>()
 
 const route = useRoute()
 const router = useRouter()
 const { isDark, toggleTheme } = useTheme()
-const { accountLabel, displayName, avatarInitial, currentUser } = useAccount()
+const { config } = useConfig()
 
-/* ---------- 顶部主导航：由路由 meta 推导 ---------- */
-const menuGroups = useMenuGroups()
-const navItems = computed(() => menuGroups.value.flatMap((group) => group.items))
+/** 详情页要把所属的一级导航点亮。 */
+const activeName = computed(() => {
+  const name = String(route.name ?? '')
 
-/* ---------- 全局搜索（当前仅匹配导航项，后续可接后端检索） ---------- */
-const keyword = ref('')
-const searchInput = ref<HTMLInputElement | null>(null)
-
-const searchResults = computed(() => {
-  const kw = keyword.value.trim().toLowerCase()
-  if (!kw) return []
-  return navItems.value.filter((item) => item.title.toLowerCase().includes(kw)).slice(0, 5)
+  return navAlias[name] ?? name
 })
 
-function goSearch(name: string): void {
-  keyword.value = ''
-  searchInput.value?.blur()
-  router.push({ name })
+/** 接口地址原本在侧栏底部，侧栏没了就挂到设置按钮的 title 上，不额外占地方。 */
+const settingsTitle = computed(() => `设置 · 接口 ${config.apiBaseUrl || '与站点同源'}`)
+
+function goCapture(): void {
+  void router.push({ name: 'capture' })
 }
-
-/* ---------- 用户菜单 ---------- */
-const isUserMenuOpen = ref(false)
-const userAreaRef = ref<HTMLElement | null>(null)
-
-function toggleUserMenu(): void {
-  isUserMenuOpen.value = !isUserMenuOpen.value
-}
-
-function closeUserMenu(): void {
-  isUserMenuOpen.value = false
-}
-
-/** 点到用户区之外就收起菜单；点在按钮上时不收，交给 toggle 处理。 */
-function closeUserMenuOnOutsideClick(event: MouseEvent): void {
-  if (!isUserMenuOpen.value) return
-
-  const target = event.target
-  if (target instanceof Node && userAreaRef.value?.contains(target)) return
-
-  closeUserMenu()
-}
-
-function onKeydown(event: KeyboardEvent): void {
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
-    event.preventDefault()
-    searchInput.value?.focus()
-  }
-
-  if (event.key === 'Escape') {
-    searchInput.value?.blur()
-    closeUserMenu()
-  }
-}
-
-/* ---------- 刷新按钮的旋转反馈 ---------- */
-const refreshing = ref(false)
-function refresh(): void {
-  if (refreshing.value) return
-  refreshing.value = true
-  window.setTimeout(() => (refreshing.value = false), 700)
-}
-
-// 路由一变就收起用户菜单，避免菜单挂在旧页面上
-watch(
-  () => route.fullPath,
-  () => closeUserMenu(),
-)
-
-onMounted(() => {
-  window.addEventListener('keydown', onKeydown)
-  document.addEventListener('click', closeUserMenuOnOutsideClick)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('keydown', onKeydown)
-  document.removeEventListener('click', closeUserMenuOnOutsideClick)
-})
 </script>
 
 <template>
   <header class="app-header">
     <div class="app-header__inner">
       <RouterLink class="brand" :to="{ name: 'dashboard' }">
-        <span class="brand__logo">
-          <AppIcon name="terminal" :size="16" :stroke-width="2.2" />
-        </span>
-        <span class="brand__name">Learning Hub</span>
+        <span class="brand__mark">错</span>
+        <span class="brand__name">错题本</span>
       </RouterLink>
 
-      <!-- 顶部横向导航：与参考站点一致，居中排布 -->
-      <nav class="top-nav" aria-label="主导航">
+      <nav class="header-nav" aria-label="主导航">
         <RouterLink
-          v-for="item in navItems"
+          v-for="item in primaryNav"
           :key="item.name"
-          class="top-nav__link"
-          :class="{ 'is-active': route.name === item.name }"
+          class="header-nav__item"
+          :class="{ 'is-active': activeName === item.name }"
           :to="{ name: item.name }"
+          :title="item.label"
+          :aria-label="item.label"
         >
-          {{ item.title }}
+          <AppIcon :name="item.icon" :size="15" />
+          <span class="header-nav__text">{{ item.label }}</span>
+        </RouterLink>
+
+        <span class="header-nav__divider" aria-hidden="true" />
+
+        <RouterLink
+          v-for="item in secondaryNav"
+          :key="item.name"
+          class="header-nav__item"
+          :class="{ 'is-active': activeName === item.name }"
+          :to="{ name: item.name }"
+          :title="item.label"
+          :aria-label="item.label"
+        >
+          <AppIcon :name="item.icon" :size="15" />
+          <span class="header-nav__text">{{ item.label }}</span>
         </RouterLink>
       </nav>
 
       <div class="app-header__actions">
-        <div class="search">
-          <AppIcon name="search" :size="15" class="search__icon" />
-          <input
-            ref="searchInput"
-            v-model="keyword"
-            class="search__input"
-            type="text"
-            placeholder="搜索页面"
-            @keydown.enter="searchResults[0] && goSearch(searchResults[0].name)"
-          />
-          <kbd class="search__kbd">Ctrl K</kbd>
-
-          <ul v-if="keyword && searchResults.length" class="search__panel">
-            <li v-for="item in searchResults" :key="item.name">
-              <RouterLink :to="{ name: item.name }" class="search__item" @click="keyword = ''">
-                <AppIcon :name="item.icon" :size="15" />
-                <span>{{ item.title }}</span>
-                <code>{{ item.path }}</code>
-              </RouterLink>
-            </li>
-          </ul>
-          <p v-else-if="keyword" class="search__panel search__empty">没有匹配的页面</p>
-        </div>
+        <button class="btn btn--sm btn--primary capture-btn" type="button" title="录入题目" @click="goCapture">
+          <AppIcon name="plus" :size="14" :stroke-width="2.2" />
+          <span class="capture-btn__text">录入题目</span>
+        </button>
 
         <button
           class="icon-btn"
           type="button"
           :title="isDark ? '切换到浅色模式' : '切换到深色模式'"
+          :aria-label="isDark ? '切换到浅色模式' : '切换到深色模式'"
           @click="toggleTheme"
         >
-          <AppIcon :name="isDark ? 'sun' : 'moon'" :size="17" />
+          <AppIcon :name="isDark ? 'sun' : 'moon'" :size="16" />
         </button>
 
-        <button class="icon-btn" type="button" title="刷新当前页" @click="refresh">
-          <AppIcon name="refresh" :size="17" :class="{ 'is-spinning': refreshing }" />
+        <button
+          class="icon-btn"
+          type="button"
+          :title="settingsTitle"
+          aria-label="设置"
+          @click="emit('open-settings')"
+        >
+          <AppIcon name="settings" :size="16" />
         </button>
-
-        <span class="app-header__divider"></span>
-
-        <div ref="userAreaRef" class="user">
-          <button
-            class="user-chip"
-            type="button"
-            aria-haspopup="menu"
-            :aria-expanded="isUserMenuOpen"
-            @click="toggleUserMenu"
-          >
-            <span class="user-chip__avatar">
-              <img
-                v-if="currentUser?.avatar"
-                :src="currentUser.avatar"
-                alt=""
-                decoding="async"
-              />
-              <template v-else-if="avatarInitial">{{ avatarInitial }}</template>
-              <AppIcon v-else name="user" :size="14" />
-            </span>
-            <span class="user-chip__name">{{ displayName }}</span>
-            <AppIcon name="chevronDown" :size="14" class="user-chip__arrow" />
-          </button>
-
-          <Transition name="user-menu">
-            <ul v-if="isUserMenuOpen" class="user-menu" role="menu">
-              <li v-if="loggedIn && accountLabel" class="user-menu__account">
-                <span class="user-menu__account-name">{{ accountLabel }}</span>
-                <span class="user-menu__account-note">本地记录 · 资料接口未接入</span>
-              </li>
-
-              <template v-if="loggedIn">
-                <li>
-                  <RouterLink
-                    class="user-menu__item"
-                    role="menuitem"
-                    :to="{ name: 'logout' }"
-                    @click="closeUserMenu"
-                  >
-                    退出登录
-                  </RouterLink>
-                </li>
-              </template>
-              <template v-else>
-                <li>
-                  <RouterLink
-                    class="user-menu__item"
-                    role="menuitem"
-                    :to="{ name: 'login' }"
-                    @click="closeUserMenu"
-                  >
-                    登录
-                  </RouterLink>
-                </li>
-                <li>
-                  <RouterLink
-                    class="user-menu__item"
-                    role="menuitem"
-                    :to="{ name: 'register' }"
-                    @click="closeUserMenu"
-                  >
-                    注册
-                  </RouterLink>
-                </li>
-              </template>
-            </ul>
-          </Transition>
-        </div>
       </div>
     </div>
   </header>
@@ -228,44 +108,41 @@ onBeforeUnmount(() => {
 <style scoped>
 .app-header {
   position: fixed;
-  inset: 0 0 auto;
-  z-index: 20;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 40;
   height: var(--header-height);
   border-bottom: 1px solid var(--border-color);
   background: var(--bg-header);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(8px);
 }
 
 .app-header__inner {
-  position: relative;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 22px;
   height: 100%;
+  max-width: var(--page-max-width);
+  margin: 0 auto;
   padding: 0 24px;
 }
 
-/* ---------- 品牌 ---------- */
 .brand {
   display: flex;
   flex: none;
   align-items: center;
-  gap: 8px;
-  padding: 4px 8px 4px 4px;
-  border-radius: var(--radius-md);
-  transition: background var(--duration) var(--ease);
+  gap: 9px;
 }
 
-.brand:hover {
-  background: var(--bg-surface-hover);
-}
-
-.brand__logo {
+.brand__mark {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border-radius: var(--radius-md);
+  font-size: 11.5px;
+  font-weight: 700;
   color: var(--text-inverse);
   background: var(--accent);
 }
@@ -273,348 +150,135 @@ onBeforeUnmount(() => {
 .brand__name {
   font-size: 14px;
   font-weight: 700;
-  letter-spacing: -0.1px;
+  letter-spacing: -0.2px;
   color: var(--text-primary);
-  white-space: nowrap;
 }
 
-/* ---------- 顶部导航 ---------- */
-/**
- * 页面变多后导航改为「可伸缩的居中条」：
- * 空间足够时居中排布，空间不足时横向滚动，不会挤压品牌与右侧动作区。
- */
-.top-nav {
+/* ---------- 导航 ---------- */
+.header-nav {
   display: flex;
   flex: 1;
-  justify-content: center;
-  /* 溢出时退化为左对齐，避免居中把第一项挤出可视区 */
-  justify-content: safe center;
+  align-items: center;
+  gap: 2px;
   min-width: 0;
-  height: 100%;
-  overflow-x: auto;
-  scrollbar-width: none;
 }
 
-.top-nav::-webkit-scrollbar {
-  display: none;
-}
-
-.top-nav__link {
-  position: relative;
+.header-nav__item {
   display: flex;
   flex: none;
   align-items: center;
-  padding: 0 12px;
+  gap: 7px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--radius-md);
   font-size: 13px;
-  font-weight: 600;
   color: var(--text-secondary);
   white-space: nowrap;
-  transition: color var(--duration) var(--ease);
+  transition:
+    background var(--duration) var(--ease),
+    color var(--duration) var(--ease);
 }
 
-.top-nav__link::after {
-  content: '';
-  position: absolute;
-  right: 12px;
-  bottom: 0;
-  left: 12px;
-  height: 2px;
-  background: transparent;
-  transition: background var(--duration) var(--ease);
-}
-
-.top-nav__link:hover {
+.header-nav__item:hover {
   color: var(--text-primary);
+  background: var(--bg-surface-hover);
 }
 
-.top-nav__link.is-active {
+.header-nav__item.is-active {
   color: var(--text-primary);
+  font-weight: 600;
+  background: var(--accent-soft);
 }
 
-.top-nav__link.is-active::after {
-  background: var(--accent);
+.header-nav__divider {
+  flex: none;
+  width: 1px;
+  height: 16px;
+  margin: 0 6px;
+  background: var(--border-color);
 }
 
-/* ---------- 右侧动作区 ---------- */
+/* ---------- 右侧动作 ---------- */
 .app-header__actions {
   display: flex;
+  flex: none;
   align-items: center;
-  gap: 8px;
-  margin-left: auto;
+  gap: 6px;
 }
 
 .icon-btn {
   display: grid;
-  flex: none;
   place-items: center;
   width: 32px;
   height: 32px;
-  border: 1px solid transparent;
   border-radius: var(--radius-md);
-  color: var(--text-secondary);
-  transition:
-    background var(--duration) var(--ease),
-    color var(--duration) var(--ease),
-    border-color var(--duration) var(--ease);
-}
-
-.icon-btn:hover {
-  color: var(--text-primary);
-  background: var(--bg-surface-hover);
-  border-color: var(--border-color);
-}
-
-.is-spinning {
-  animation: spin 0.7s var(--ease);
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* ---------- 搜索 ---------- */
-.search {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 220px;
-  height: 32px;
-  padding: 0 10px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  background: var(--bg-input);
-  transition:
-    border-color var(--duration) var(--ease),
-    box-shadow var(--duration) var(--ease);
-}
-
-.search:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
-}
-
-.search__icon {
-  color: var(--text-muted);
-}
-
-.search__input {
-  flex: 1;
-  min-width: 0;
-  border: none;
-  outline: none;
-  font-size: 12.5px;
-  background: transparent;
-}
-
-.search__input::placeholder {
-  color: var(--text-muted);
-}
-
-.search__kbd {
-  flex: none;
-  padding: 1px 5px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--text-muted);
-  background: var(--bg-surface-hover);
-}
-
-.search__panel {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  width: 100%;
-  padding: 4px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  background: var(--bg-elevated);
-  box-shadow: var(--shadow-lg);
-}
-
-.search__item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 8px;
-  border-radius: var(--radius-sm);
-  font-size: 12.5px;
-  color: var(--text-secondary);
-}
-
-.search__item:hover {
-  color: var(--text-primary);
-  background: var(--bg-surface-hover);
-}
-
-.search__item span {
-  flex: 1;
-}
-
-.search__item code {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  color: var(--text-muted);
-}
-
-.search__empty {
-  font-size: 12px;
-  color: var(--text-muted);
-  text-align: center;
-}
-
-/* ---------- 用户 ---------- */
-.app-header__divider {
-  width: 1px;
-  height: 20px;
-  margin: 0 4px;
-  background: var(--border-color);
-}
-
-.user {
-  position: relative;
-}
-
-.user-chip {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 34px;
-  padding: 0 8px 0 4px;
-  border-radius: var(--radius-md);
-  transition: background var(--duration) var(--ease);
-}
-
-.user-chip:hover {
-  background: var(--bg-surface-hover);
-}
-
-.user-chip__avatar {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  overflow: hidden;
-  border-radius: var(--radius-full);
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--text-inverse);
-  background: var(--accent);
-}
-
-.user-chip__avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.user-chip__name {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--text-primary);
-  white-space: nowrap;
-}
-
-.user-chip__arrow {
-  color: var(--text-muted);
-}
-
-.user-menu {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  z-index: 30;
-  display: grid;
-  min-width: 190px;
-  max-width: 260px;
-  padding: 4px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  background: var(--bg-elevated);
-  box-shadow: var(--shadow-lg);
-}
-
-.user-menu__account {
-  display: grid;
-  gap: 2px;
-  margin-bottom: 4px;
-  padding: 7px 10px 9px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.user-menu__account-name {
-  overflow: hidden;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--text-primary);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.user-menu__account-note {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.user-menu__item {
-  display: block;
-  padding: 8px 10px;
-  border-radius: var(--radius-sm);
-  font-size: 12.5px;
-  font-weight: 500;
   color: var(--text-secondary);
   transition:
     background var(--duration) var(--ease),
     color var(--duration) var(--ease);
 }
 
-.user-menu__item:hover {
+.icon-btn:hover {
   color: var(--text-primary);
   background: var(--bg-surface-hover);
 }
 
-.user-menu-enter-active,
-.user-menu-leave-active {
-  transition:
-    opacity 0.15s var(--ease),
-    transform 0.15s var(--ease);
-}
-
-.user-menu-enter-from,
-.user-menu-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
-}
-
-@media (max-width: 1280px) {
-  .search {
-    display: none;
-  }
-}
-
-@media (max-width: 768px) {
+/* ---------- 收窄：导航退化为图标 ---------- */
+@media (max-width: 900px) {
   .app-header__inner {
+    gap: 12px;
     padding: 0 16px;
   }
 
-  .brand__name,
-  .app-header__divider,
-  .user-chip__name {
+  .header-nav__text {
     display: none;
   }
 
-  .top-nav__link {
-    padding: 0 10px;
-    font-size: 12.5px;
+  .header-nav__item {
+    justify-content: center;
+    gap: 0;
+    width: 34px;
+    padding: 0;
   }
 
-  .top-nav__link::after {
-    right: 10px;
-    left: 10px;
+  .header-nav__divider {
+    margin: 0 4px;
+  }
+}
+
+@media (max-width: 560px) {
+  .app-header__inner {
+    gap: 8px;
+    padding: 0 12px;
+  }
+
+  .header-nav__item {
+    width: 32px;
+  }
+
+  .brand__name {
+    display: none;
+  }
+
+  .capture-btn__text {
+    display: none;
+  }
+
+  .capture-btn {
+    width: 28px;
+    padding: 0;
+  }
+}
+
+/* 极窄（<380px）：导航改成横向滚动，宁可少看一项，也不要整页横向溢出 */
+@media (max-width: 380px) {
+  .header-nav {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .header-nav::-webkit-scrollbar {
+    display: none;
   }
 }
 </style>

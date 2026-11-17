@@ -2,26 +2,21 @@
  * 通信层 —— 站内唯一的网络出口。
  *
  * 四件事只在这里做：
- * 1. 拼地址：统一以 `VITE_API_BASE_URL` 为前缀，留空则与站点同源；
- * 2. 鉴权：已登录时自动带上 `Authorization: Bearer <token>`；
- * 3. 编解码：请求体自动 JSON 序列化，响应体自动解析；
- * 4. 错误：非 2xx 与「请求根本没发出去」统一转成 `ApiError`。
+ * 1. 拼地址：以 `VITE_API_BASE_URL` 为前缀，运行时配置优先，留空则同源；
+ * 2. 编解码：请求体自动 JSON 序列化，响应体自动解析；
+ * 3. 错误：非 2xx 与「请求根本没发出去」统一转成 `ApiError`；
+ * 4. 约定：后端错误体固定为 `{"error": "..."}`，这里优先读它。
  *
- * 业务模块只描述「请求哪个路径、带什么参数、返回什么类型」，
- * 不要自己调 fetch，也不要自己拼 base url、自己写 Authorization。
+ * ⚠️ 当前后端**没有鉴权**（`AuthFilter` 把 principal 固定为 1），
+ * 因此这里不带任何 token，也不处理 401。等后端加鉴权时只需在这里补一个请求头。
  */
 
 import { normalizeApiBaseUrl, useConfig } from '@/config'
-import { clearSession, getAuthorizationHeader } from './session'
 
 /** 构建期兜底地址：运行时配置留空时使用。 */
 const ENV_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '')
 
-/**
- * 当前生效的接口前缀：运行时配置（cookie）> 构建期环境变量 > 同源（空串）。
- *
- * 配置来自 `config/`，因此父项目里设置过的 API 地址在本项目首次访问时可以直接继承。
- */
+/** 当前生效的接口前缀：运行时配置（cookie）> 构建期环境变量 > 同源（空串）。 */
 function resolveBaseUrl(): string {
   const { config } = useConfig()
 
@@ -51,8 +46,6 @@ export interface RequestOptions {
   query?: QueryParams
   /** 用于取消请求；被取消时原样抛出 `AbortError`。 */
   signal?: AbortSignal
-  /** 是否附带登录令牌，默认 `true`；登录 / 注册等公开接口显式传 `false`。 */
-  auth?: boolean
 }
 
 function resolveUrl(path: string, query?: QueryParams): string {
@@ -93,7 +86,8 @@ function extractMessage(body: unknown): string {
 
   if (typeof body === 'object' && body !== null) {
     const record = body as Record<string, unknown>
-    const detail = record.message ?? record.detail ?? record.error
+    // 后端 `GlobalExceptionHandler` 固定返回 `{"error": "..."}`，优先它。
+    const detail = record.error ?? record.message ?? record.detail
 
     if (typeof detail === 'string' && detail.trim() !== '') {
       return detail.trim()
@@ -130,17 +124,9 @@ async function readBody(response: Response): Promise<unknown> {
  * - 请求没能发出：抛 `ApiError`，`status` 为 `0`。
  */
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, query, signal, auth = true } = options
+  const { method = 'GET', body, query, signal } = options
   const headers: Record<string, string> = { Accept: 'application/json' }
   let payload: BodyInit | undefined
-
-  if (auth) {
-    const authorization = getAuthorizationHeader()
-
-    if (authorization !== null) {
-      headers.Authorization = authorization
-    }
-  }
 
   if (body !== undefined) {
     if (body instanceof FormData) {
@@ -161,19 +147,12 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
       throw cause
     }
 
-    throw new ApiError(0, '无法连接到服务器，请检查网络或 API 地址。', null)
+    throw new ApiError(0, '无法连接到服务器，请检查网络或设置里的接口地址。', null)
   }
 
   const responseBody = await readBody(response)
 
   if (!response.ok) {
-    // 带鉴权的请求收到 401：本地令牌已不可用（过期 / 被吊销），直接清掉会话，
-    // 界面随之回到未登录，避免顶栏显示「已登录」却什么也做不了。
-    // 登录 / 注册是 `auth: false`，它们返回 401（账号密码错误）时不会走到这里。
-    if (response.status === 401 && auth) {
-      clearSession()
-    }
-
     const message =
       extractMessage(responseBody)
       || (response.statusText.trim() !== ''
@@ -203,6 +182,23 @@ export function postJson<T>(
   return request<T>(path, { ...options, method: 'POST', body })
 }
 
+/** PUT 请求。注意 `Q9`/`Q12`/`L4` 这类接口把参数放在 query 上，没有请求体。 */
+export function putJson<T>(
+  path: string,
+  body?: unknown,
+  options: Omit<RequestOptions, 'method' | 'body'> = {},
+): Promise<T> {
+  return request<T>(path, { ...options, method: 'PUT', body })
+}
+
+/** DELETE 请求。 */
+export function deleteJson<T>(
+  path: string,
+  options: Omit<RequestOptions, 'method' | 'body'> = {},
+): Promise<T> {
+  return request<T>(path, { ...options, method: 'DELETE' })
+}
+
 /**
  * POST 表单（含文件上传）。
  *
@@ -215,4 +211,22 @@ export function postForm<T>(
   options: Omit<RequestOptions, 'method' | 'body'> = {},
 ): Promise<T> {
   return request<T>(path, { ...options, method: 'POST', body: form })
+}
+
+/** 把任意异常转成一句能展示给用户的话。 */
+export function errorMessage(cause: unknown): string {
+  if (cause instanceof ApiError) {
+    return cause.message
+  }
+
+  if (cause instanceof Error && cause.message.trim() !== '') {
+    return cause.message
+  }
+
+  return '操作失败，请稍后重试。'
+}
+
+/** 是否「目标不存在」（404）。 */
+export function isNotFound(cause: unknown): boolean {
+  return cause instanceof ApiError && cause.status === 404
 }

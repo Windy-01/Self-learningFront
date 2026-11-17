@@ -1,0 +1,162 @@
+/**
+ * 渲染后的 Markdown 排版（题干、选项、录入页预览区共用）。
+ *
+ * 这些节点是 `v-html` 注入的，拿不到组件的 scoped 属性，所以规则只能放在全局。
+ * 刻意做成「跟正文一个样」：有段距、列表缩进、表格边框，但不抢标题层级。
+ * 尺寸一律用 em，让同一个 `.md-body` 在 14px 的题干和 13px 的预览里都合适。
+ */
+
+.md-body {
+  word-break: break-word;
+}
+
+/* 首尾贴边，避免卡片里凭空多出一截空白 */
+.md-body > :first-child {
+  margin-top: 0;
+}
+
+.md-body > :last-child {
+  margin-bottom: 0;
+}
+
+.md-body p {
+  margin: 0 0 0.6em;
+}
+
+.md-body ul,
+.md-body ol {
+  margin: 0 0 0.6em;
+  padding-left: 1.6em;
+}
+
+.md-body li {
+  margin: 0.15em 0;
+}
+
+.md-body li::marker {
+  color: var(--text-muted);
+}
+
+.md-body strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.md-body em {
+  font-style: italic;
+}
+
+.md-body del {
+  color: var(--text-muted);
+}
+
+.md-body code {
+  padding: 0.1em 0.35em;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+.md-body pre {
+  margin: 0 0 0.6em;
+  padding: 9px 11px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-hover);
+  overflow-x: auto;
+}
+
+.md-body pre code {
+  padding: 0;
+  background: none;
+  font-size: 0.88em;
+}
+
+.md-body blockquote {
+  margin: 0 0 0.6em;
+  padding: 0.1em 0 0.1em 0.7em;
+  border-left: 2px solid var(--border-strong);
+  color: var(--text-secondary);
+}
+
+.md-body h1,
+.md-body h2,
+.md-body h3,
+.md-body h4,
+.md-body h5,
+.md-body h6 {
+  margin: 0.9em 0 0.45em;
+  font-size: 1.06em;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.md-body h1 {
+  font-size: 1.15em;
+}
+
+.md-body a {
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.md-body hr {
+  margin: 0.9em 0;
+  border: none;
+  border-top: 1px solid var(--border-color);
+}
+
+.md-body table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  margin: 0 0 0.6em;
+  border-collapse: collapse;
+  overflow-x: auto;
+  font-size: 0.94em;
+}
+
+.md-body th,
+.md-body td {
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  text-align: left;
+}
+
+.md-body th {
+  background: var(--bg-surface-hover);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.md-body img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* 块公式可能比容器宽，让它自己横向滚，别撑破布局 */
+.md-body .katex-display {
+  margin: 0.5em 0;
+  padding: 0.1em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* 块公式外面还套了一层 <p class="katex-block">，内层不再加外边距，否则段距翻倍 */
+.md-body p.katex-block .katex-display {
+  margin: 0;
+}
+
+/* 行内用法（选项）：不产生段落，也不该带块级间距 */
+.md-body--inline p {
+  display: inline;
+  margin: 0;
+}
+
+.md-body--inline .katex-display {
+  display: inline-block;
+  margin: 0;
+}

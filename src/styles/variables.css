@@ -11,13 +11,10 @@
 
   /* ---------- 布局尺寸 ---------- */
   --header-height: 64px;
-  --aside-width: 240px;
-  --aside-width-collapsed: 64px;
   --page-max-width: 1440px;
 
   /* ---------- 背景层级 ---------- */
   --bg-app: #f5f5f5;
-  --bg-sidebar: #ffffff;
   --bg-header: rgba(255, 255, 255, 0.92);
   --bg-surface: #ffffff;
   --bg-surface-hover: #f2f2f2;
@@ -79,7 +76,6 @@
   color-scheme: dark;
 
   --bg-app: #0a0a0a;
-  --bg-sidebar: #101010;
   --bg-header: rgba(16, 16, 16, 0.92);
   --bg-surface: #141414;
   --bg-surface-hover: #1c1c1c;
